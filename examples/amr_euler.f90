@@ -223,8 +223,6 @@ program euler
     fc3 = 1.0_dp
     fc4 = 1.0_dp
     
-    !There are some redundant calculations being done here.
-    !For instance, I do not need the values of fc(:,:,3,ifx)....
     
     call flux_koren_2d(cc(DTIMES(:), ic1), fc1, nc, 2)
     call flux_koren_2d(cc(DTIMES(:), ic2), fc2, nc, 2)
@@ -285,7 +283,7 @@ program euler
                     box%cc(i-1,j,ic1) + &
                     box%cc(i,j+1,ic1) + &
                     box%cc(i,j-1,ic1))
-        box%cc(i,j,ic1) = avg - dt(1) *( &
+        box%cc(i,j,ic1) = avg - 0.5_dp*dt(1) *( &
                           inv_dr(1)*( &
                           box%fc(i+1,j,1,if1) - box%fc(i,j,1,if1)) + &
                           inv_dr(2)*( &
@@ -294,7 +292,7 @@ program euler
                     box%cc(i-1,j,ic2) + &
                     box%cc(i,j+1,ic2) + &
                     box%cc(i,j-1,ic2))
-       box%cc(i,j,ic2) = avg - dt(1) *( &
+       box%cc(i,j,ic2) = avg - 0.5_dp*dt(1) *( &
                           inv_dr(1)*( &
                           box%fc(i+1,j,1,if2) - box%fc(i,j,1,if2)) + &
                           inv_dr(2)*( &
@@ -304,7 +302,7 @@ program euler
                     box%cc(i-1,j,ic3) + &
                     box%cc(i,j+1,ic3) + &
                     box%cc(i,j-1,ic3))
-       box%cc(i,j,ic3) = avg - dt(1) *( &
+       box%cc(i,j,ic3) = avg - 0.5_dp*dt(1) *( &
                           inv_dr(1)*( &
                           box%fc(i+1,j,1,if3) - box%fc(i,j,1,if3)) + &
                           inv_dr(2)*( &
@@ -314,7 +312,7 @@ program euler
                     box%cc(i-1,j,ic4) + &
                     box%cc(i,j+1,ic4) + &
                     box%cc(i,j-1,ic4))
-       box%cc(i,j,ic4) = avg - dt(1) *( &
+       box%cc(i,j,ic4) = avg - 0.5_dp*dt(1) *( &
                           inv_dr(1)*( &
                           box%fc(i+1,j,1,if4) - box%fc(i,j,1,if4)) + &
                           inv_dr(2)*( &

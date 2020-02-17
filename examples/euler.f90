@@ -257,7 +257,7 @@ program euler
                     box%cc(i-1,j,ic1) + &
                     box%cc(i,j+1,ic1) + &
                     box%cc(i,j-1,ic1))
-        box%cc(i,j,ic1) = avg - dt(1) *( &
+        box%cc(i,j,ic1) = avg - 0.5_dp*dt(1) *( &
                           inv_dr(1)*( &
                           box%fc(i+1,j,1,if1) - box%fc(i,j,1,if1)) + &
                           inv_dr(2)*( &
@@ -266,7 +266,7 @@ program euler
                     box%cc(i-1,j,ic2) + &
                     box%cc(i,j+1,ic2) + &
                     box%cc(i,j-1,ic2))
-       box%cc(i,j,ic2) = avg - dt(1) *( &
+       box%cc(i,j,ic2) = avg - 0.5_dp*dt(1) *( &
                           inv_dr(1)*( &
                           box%fc(i+1,j,1,if2) - box%fc(i,j,1,if2)) + &
                           inv_dr(2)*( &
@@ -276,7 +276,7 @@ program euler
                     box%cc(i-1,j,ic3) + &
                     box%cc(i,j+1,ic3) + &
                     box%cc(i,j-1,ic3))
-       box%cc(i,j,ic3) = avg - dt(1) *( &
+       box%cc(i,j,ic3) = avg - 0.5_dp*dt(1) *( &
                           inv_dr(1)*( &
                           box%fc(i+1,j,1,if3) - box%fc(i,j,1,if3)) + &
                           inv_dr(2)*( &
@@ -286,7 +286,7 @@ program euler
                     box%cc(i-1,j,ic4) + &
                     box%cc(i,j+1,ic4) + &
                     box%cc(i,j-1,ic4))
-       box%cc(i,j,ic4) = avg - dt(1) *( &
+       box%cc(i,j,ic4) = avg - 0.5_dp*dt(1) *( &
                           inv_dr(1)*( &
                           box%fc(i+1,j,1,if4) - box%fc(i,j,1,if4)) + &
                           inv_dr(2)*( &
