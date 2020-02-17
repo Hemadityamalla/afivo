@@ -135,6 +135,48 @@ contains
        v(n, :, 2) = v_1d     ! Copy result
     end do
   end subroutine flux_koren_2d
+  
+  subroutine flux_kt_1d( cc, vint, vout, nc, ngc )
+    integer, intent(in)   :: nc               !< Number of cells
+    integer, intent(in)   :: ngc              !< Number of ghost cells
+    real(dp), intent(in)  :: cc(1-ngc:nc+ngc) !< Cell-centered values
+    !> Input: velocities at interfaces, output: fluxes
+    real(dp), intent(inout)  :: vint(1:nc+1), vout(1:nc+1)
+    real(dp)              :: grad1, grad2, grad3
+    integer               :: n
+    
+    do n=1, nc+1
+      grad1 = cc(n) - cc(n-1)
+      grad2 = cc(n+1) - cc(n)
+      grad3 = cc(n+2) - cc(n+1)
+      vint(n) = v(n,1)*(cc(n) + 0.5_dp*koren_mlim(grad1, grad2)) !left
+      vout(n) = v(n,2)*(cc(n+1) - 0.5_dp*koren_mlim(grad2, grad3)) !right
+    end do
+  end subroutine flux_kt_1d
+
+  !> Compute flux for the KT scheme
+  subroutine flux_kurganovTadmor_2d( cc, v, nc, ngc )
+    integer, intent(in) :: nc
+    integer, intent(in) :: ngc
+    real(dp), intent(in) :: cc(1-ngc:nc+ngc, 1-ngc:nc+ngc)
+    real(dp), intent(inout) :: v(1:nc+1, 1:nc+1, 4)
+    real(dp) :: cc_1d(1-ngc:nc+ngc), v_1d(1:nc+1, 2)
+    integer :: n
+    do n = 1, nc
+      ! x-fluxes
+      call flux_kt_1d(cc, v(:,n,1), v(:,n,2), nc, ngc)
+      
+      !y-fluxes
+      cc_1d = cc(n, :)
+      v_1d(:, 1) = v(n, :, 3)
+      v_1d(:, 2) = v(n, :, 4)
+      call flux_kt_1d(cc_1d, v_1d(:,1), v_1d(:,2), nc, ngc)
+      v(n,:,3) = v_1d(:,1)
+      v(n,:,4) = v_1d(:,2)
+    end do
+  end subroutine flux_kurganovTadmor_2d
+
+
 
   !> Compute flux according to Koren limiter
   subroutine flux_koren_3d(cc, v, nc, ngc)
