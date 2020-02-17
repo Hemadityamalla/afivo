@@ -1,6 +1,6 @@
 #include "../src/cpp_macros.h"
 
-program euler
+program amr_euler
   use m_af_all
   implicit none
   
@@ -101,7 +101,7 @@ program euler
       call af_write_silo(tree, trim(fname), t_iter, time, dir="output")
     end if
   
-   call af_loop_tree(tree, korenFlux, .true.)
+   call af_loop_tree(tree, korenFluxTest, .true.)
    call af_consistent_fluxes(tree, [ic1, ic2, ic3, ic4])
    call af_loop_box_arg(tree, updateSoln, [dt])
    call af_restrict_tree(tree, ic1)
@@ -229,44 +229,74 @@ program euler
     call flux_koren_2d(cc(DTIMES(:), ic3), fc3, nc, 2)
     call flux_koren_2d(cc(DTIMES(:), ic4), fc4, nc, 2)
     
-    tree%boxes(id)%fc(:,:,1,if1) = fc2(DTIMES(:), 1)
-    tree%boxes(id)%fc(:,:,2,if1) = fc3(DTIMES(:), 2)
+    tree%boxes(id)%fc(:,:,1,if1) = eulerFlux(fc1(DTIMES(:),1), &
+                                             fc2(DTIMES(:),1), &
+                                             fc3(DTIMES(:),1), &
+                                             fc4(DTIMES(:),1), 11)
+    tree%boxes(id)%fc(:,:,2,if1) = eulerFlux(fc1(DTIMES(:),2), &
+                                             fc2(DTIMES(:),2), &
+                                             fc3(DTIMES(:),2), &
+                                             fc4(DTIMES(:),2), 12)
     
     
-    tree%boxes(id)%fc(:,:,1,if2) = (fc2(DTIMES(:), 1)**2/fc1(DTIMES(:), 1)) + &
-                                    (Y-1.0_dp)*( fc4(DTIMES(:), 1) - &
-                                    (fc2(DTIMES(:), 1)**2 + & 
-                                    fc3(DTIMES(:), 1)**2)/ &
-                                    (2.0_dp*fc1(DTIMES(:), 1)))
-    tree%boxes(id)%fc(:,:,2,if2) = (fc2(DTIMES(:), 2)*fc3(DTIMES(:), 2))/ &
-                                    fc1(DTIMES(:), 2)
+    tree%boxes(id)%fc(:,:,1,if2) = eulerFlux(fc1(DTIMES(:),1), &
+                                             fc2(DTIMES(:),1), &
+                                             fc3(DTIMES(:),1), &
+                                             fc4(DTIMES(:),1), 21)
+    tree%boxes(id)%fc(:,:,2,if2) = eulerFlux(fc1(DTIMES(:),2), &
+                                             fc2(DTIMES(:),2), &
+                                             fc3(DTIMES(:),2), &
+                                             fc4(DTIMES(:),2), 22)
     
     
-    tree%boxes(id)%fc(:,:,1,if3) = (fc2(DTIMES(:), 1)*fc3(DTIMES(:), 1))/ &
-                                    fc1(DTIMES(:), 1)
-    tree%boxes(id)%fc(:,:,2,if3) = (fc3(DTIMES(:), 2)**2/fc1(DTIMES(:), 2)) + &
-                                    (Y-1.0_dp)*( fc4(DTIMES(:), 2) - &
-                                    (fc2(DTIMES(:), 2)**2 + & 
-                                    fc3(DTIMES(:), 2)**2)/ &
-                                    (2.0_dp*fc1(DTIMES(:), 2)))
+    tree%boxes(id)%fc(:,:,1,if3) = eulerFlux(fc1(DTIMES(:),1), &
+                                             fc2(DTIMES(:),1), &
+                                             fc3(DTIMES(:),1), &
+                                             fc4(DTIMES(:),1), 31)
+    tree%boxes(id)%fc(:,:,2,if3) = eulerFlux(fc1(DTIMES(:),2), &
+                                             fc2(DTIMES(:),2), &
+                                             fc3(DTIMES(:),2), &
+                                             fc4(DTIMES(:),2), 32)
                                     
                                     
-    tree%boxes(id)%fc(:,:,1,if4) = (fc2(DTIMES(:), 1)/fc1(DTIMES(:), 1))* &
-                                   (fc4(DTIMES(:), 1) + &
-                                     (Y - 1.0_dp)*( fc4(DTIMES(:), 1) - &
-                                     (fc2(DTIMES(:), 1)**2 + & 
-                                     fc3(DTIMES(:), 1)**2)/ &
-                                     (2.0_dp*fc1(DTIMES(:), 1))))
+    tree%boxes(id)%fc(:,:,1,if4) = eulerFlux(fc1(DTIMES(:),1), &
+                                             fc2(DTIMES(:),1), &
+                                             fc3(DTIMES(:),1), &
+                                             fc4(DTIMES(:),1), 41)
                                      
-    tree%boxes(id)%fc(:,:,2,if4) = (fc3(DTIMES(:), 2)/fc1(DTIMES(:), 2))*( & 
-                                   fc4(DTIMES(:), 2) + &
-                                     (Y - 1.0_dp)*( fc4(DTIMES(:), 2) - &
-                                     (fc2(DTIMES(:), 2)**2 + & 
-                                     fc3(DTIMES(:), 2)**2)/ &
-                                     (2.0_dp*fc1(DTIMES(:), 2))))
+    tree%boxes(id)%fc(:,:,2,if4) = eulerFlux(fc1(DTIMES(:),2), &
+                                             fc2(DTIMES(:),2), &
+                                             fc3(DTIMES(:),2), &
+                                             fc4(DTIMES(:),2), 42)
 
     
   end subroutine korenFlux
+  
+  elemental function eulerFlux(c1, c2, c3, c4, eqno) result(flux)
+    real(dp), intent(in) :: c1, c2, c3, c4
+    integer, intent(in) :: eqno
+    real(dp) :: flux
+    
+    select case( eqno )
+      case( 11 )
+        flux = c2
+      case( 12 )
+        flux = c3
+      case( 21 )
+        flux = (c2**2/c1) + (Y-1.0_dp)*(c4 - (c2**2 + c3**2)/(2.0_dp*c1))
+      case( 22 )
+        flux = (c2*c3)/c1
+      case( 31 )
+        flux = (c2*c3)/c1
+      case( 32 )
+        flux = (c3**2/c1) + (Y-1.0_dp)*(c4 - (c2**2 + c3**2)/(2.0_dp*c1))
+      case( 41 )
+        flux = (c2/c1)*(c4 + (Y-1.0_dp)*(c4 - (c2**2 + c3**2)/(2.0_dp*c1)))
+      case( 42 )
+        flux = (c3/c1)*(c4 + (Y-1.0_dp)*(c4 - (c2**2 + c3**2)/(2.0_dp*c1)))
+    end select
+  
+  end function eulerFlux
   !=====================================================================
   
   subroutine updateSoln( box, dt )
@@ -344,4 +374,4 @@ program euler
     
   end subroutine ref_rout
 
-end program euler
+end program amr_euler
