@@ -34,22 +34,22 @@ program amr_euler
   !u = (/0.0_dp, -0.7259_dp, -0.7259_dp, 0.0_dp/)
   !v = (/0.0_dp, 0.0_dp, -1.4045_dp, -1.4045_dp/)
   
-  p = (/1.1_dp, 0.35_dp, 1.1_dp, 0.35_dp/)
-  rho = (/1.1_dp, 0.5065_dp, 1.1_dp, 0.5065_dp/)
-  u = (/0.0_dp, 0.8939_dp, 0.8939_dp, 0.0_dp/)
-  v = (/0.0_dp, 0.0_dp, 0.8939_dp, 0.8939_dp/)
+  !p = (/1.1_dp, 0.35_dp, 1.1_dp, 0.35_dp/)
+  !rho = (/1.1_dp, 0.5065_dp, 1.1_dp, 0.5065_dp/)
+  !u = (/0.0_dp, 0.8939_dp, 0.8939_dp, 0.0_dp/)
+  !v = (/0.0_dp, 0.0_dp, 0.8939_dp, 0.8939_dp/)
 
-  !rho = (/0.125_dp, 1.0_dp, 1.0_dp, 0.125_dp/)
-  !p = (/0.1_dp, 1.0_dp, 1.0_dp, 0.1_dp/)
-  !u = (/0.0_dp, 0.0_dp, 0.0_dp, 0.0_dp/)
-  !v = (/0.0_dp, 0.0_dp, 0.0_dp, 0.0_dp/)
+  rho = (/0.125_dp, 1.0_dp, 1.0_dp, 0.125_dp/)
+  p = (/0.1_dp, 1.0_dp, 1.0_dp, 0.1_dp/)
+  u = (/0.0_dp, 0.0_dp, 0.0_dp, 0.0_dp/)
+  v = (/0.0_dp, 0.0_dp, 0.0_dp, 0.0_dp/)
 
   
   wSp = calc_speed(rho, u, v, p)
   
   
   
-  grid(:) = 5*ncells
+  grid(:) = 10*ncells
   l_max(:) = 1.0_dp
   l_min(:) = 0.0_dp
   periodicBC(:) = .false.
@@ -101,7 +101,7 @@ program amr_euler
       call af_write_silo(tree, trim(fname), t_iter, time, dir="output")
     end if
   
-   call af_loop_tree(tree, korenFluxTest, .true.)
+   call af_loop_tree(tree, korenFlux, .true.)
    call af_consistent_fluxes(tree, [ic1, ic2, ic3, ic4])
    call af_loop_box_arg(tree, updateSoln, [dt])
    call af_restrict_tree(tree, ic1)

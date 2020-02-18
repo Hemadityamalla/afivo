@@ -22,22 +22,22 @@ program KT_euler
   print *, "Running Euler 2D with KT scheme"
   print *, "Number of threads", af_get_max_threads()
   
-  p = (/1.0_dp, 0.4_dp, 0.0439_dp, 0.15_dp/)
-  rho = (/1.0_dp, 0.5197_dp, 0.1072_dp, 0.2579_dp/)
-  u = (/0.0_dp, -0.7259_dp, -0.7259_dp, 0.0_dp/)
-  v = (/0.0_dp, 0.0_dp, -1.4045_dp, -1.4045_dp/)
+  !p = (/1.0_dp, 0.4_dp, 0.0439_dp, 0.15_dp/)
+  !rho = (/1.0_dp, 0.5197_dp, 0.1072_dp, 0.2579_dp/)
+  !u = (/0.0_dp, -0.7259_dp, -0.7259_dp, 0.0_dp/)
+  !v = (/0.0_dp, 0.0_dp, -1.4045_dp, -1.4045_dp/)
 
-  !rho = (/0.125_dp, 1.0_dp, 1.0_dp, 0.125_dp/)
-  !p = (/0.1_dp, 1.0_dp, 1.0_dp, 0.1_dp/)
-  !u = (/0.0_dp, 0.0_dp, 0.0_dp, 0.0_dp/)
-  !v = (/0.0_dp, 0.0_dp, 0.0_dp, 0.0_dp/)
+  rho = (/0.125_dp, 1.0_dp, 1.0_dp, 0.125_dp/)
+  p = (/0.1_dp, 1.0_dp, 1.0_dp, 0.1_dp/)
+  u = (/0.0_dp, 0.0_dp, 0.0_dp, 0.0_dp/)
+  v = (/0.0_dp, 0.0_dp, 0.0_dp, 0.0_dp/)
 
   
   wSp = calc_speed(rho, u, v, p)
   
   
   
-  grid(:) = 10*ncells
+  grid(:) = 20*ncells
   l_max(:) = 1.0_dp
   l_min(:) = 0.0_dp
   periodicBC(:) = .false.
@@ -193,7 +193,7 @@ program KT_euler
     allocate(fc4(DTIMES(1:nc+1), 2*NDIM))
     
     allocate(locWSp(DTIMES(1:nc+1), NDIM))
-    
+    cc = 0
     call af_gc2_box(tree, id, [ic1, ic2, ic3, ic4], cc)
     fc1 = 1.0_dp
     fc2 = 1.0_dp
@@ -206,55 +206,83 @@ program KT_euler
     call flux_kurganovTadmor_2d(cc(DTIMES(:), ic3), fc3, nc, 2)
     call flux_kurganovTadmor_2d(cc(DTIMES(:), ic4), fc4, nc, 2)
     
+    !print *, fc1(1,:,1)
+    !print *, "new box"
     !Computing the wave speed at the cell faces
+    
     call waveSpeed_2d(fc1, fc2, fc3, fc4, locWSp, nc)
+    !locWSp = 10.0_dp
+    !if (id == 1) then
+    !print *, 'ID:', id, "Local wave speed", locWSp
+    !if (maxval(locWsp) == INFINITY) then
+    !print *, "Maxvalue of speed", maxval(locWSp)
+    !end if 
+    !end if    
     
     
-    
-    tree%boxes(id)%fc(:,:,1,if1) = 0.5_dp*(fc2(DTIMES(:), 1) + fc2(DTIMES(:), 2) - &
-                                   locWSp(DTIMES(:),1)* &
-                                   (fc1(DTIMES(:), 2) - fc1(DTIMES(:), 1)))
-    tree%boxes(id)%fc(:,:,2,if1) = 0.5_dp*(fc3(DTIMES(:), 3) + fc3(DTIMES(:), 4) - &
-                                   locWSp(DTIMES(:),2)* &
-                                   (fc1(DTIMES(:), 4) - fc1(DTIMES(:), 3)))
-    
-    
-    tree%boxes(id)%fc(:,:,1,if2) = (fc2(DTIMES(:), 1)**2/fc1(DTIMES(:), 1)) + &
-                                    (Y-1.0_dp)*( fc4(DTIMES(:), 1) - &
-                                    (fc2(DTIMES(:), 1)**2 + & 
-                                    fc3(DTIMES(:), 1)**2)/ &
-                                    (2.0_dp*fc1(DTIMES(:), 1)))
-    tree%boxes(id)%fc(:,:,2,if2) = (fc2(DTIMES(:), 2)*fc3(DTIMES(:), 2))/ &
-                                    fc1(DTIMES(:), 2)
+    tree%boxes(id)%fc(:,:,1,if1) = avgFluxLR(fc1,fc2,fc3,fc4,11, nc) - & 
+                                   0.5_dp*locWSp(DTIMES(:),1)* &
+                                   (fc1(DTIMES(:), 2) - fc1(DTIMES(:), 1))
+                                   
+    tree%boxes(id)%fc(:,:,2,if1) = avgFluxTB(fc1,fc2,fc3,fc4,12, nc) - & 
+                                   0.5_dp*locWSp(DTIMES(:),2)* &
+                                   (fc1(DTIMES(:), 4) - fc1(DTIMES(:), 3))
     
     
-    tree%boxes(id)%fc(:,:,1,if3) = (fc2(DTIMES(:), 1)*fc3(DTIMES(:), 1))/ &
-                                    fc1(DTIMES(:), 1)
-    tree%boxes(id)%fc(:,:,2,if3) = (fc3(DTIMES(:), 2)**2/fc1(DTIMES(:), 2)) + &
-                                    (Y-1.0_dp)*( fc4(DTIMES(:), 2) - &
-                                    (fc2(DTIMES(:), 2)**2 + & 
-                                    fc3(DTIMES(:), 2)**2)/ &
-                                    (2.0_dp*fc1(DTIMES(:), 2)))
+    tree%boxes(id)%fc(:,:,1,if2) = avgFluxLR(fc1,fc2,fc3,fc4,21, nc) - &
+                                   0.5_dp*locWSp(DTIMES(:),1)* & 
+                                   (fc2(DTIMES(:), 2) - fc2(DTIMES(:), 1))
+    tree%boxes(id)%fc(:,:,2,if2) = avgFluxTB(fc1,fc2,fc3,fc4,22, nc) - &
+                                   0.5_dp*locWSp(DTIMES(:),2)* & 
+                                   (fc2(DTIMES(:), 4) - fc2(DTIMES(:), 3))
+    
+    
+    tree%boxes(id)%fc(:,:,1,if3) = avgFluxLR(fc1,fc2,fc3,fc4,31, nc) - &
+                                   0.5_dp*locWSp(DTIMES(:),1)* & 
+                                   (fc3(DTIMES(:), 2) - fc3(DTIMES(:), 1))
+    tree%boxes(id)%fc(:,:,2,if3) = avgFluxTB(fc1,fc2,fc3,fc4,32, nc) - &
+                                   0.5_dp*locWSp(DTIMES(:),2)* & 
+                                   (fc3(DTIMES(:), 4) - fc3(DTIMES(:), 3))
                                     
                                     
-    tree%boxes(id)%fc(:,:,1,if4) = (fc2(DTIMES(:), 1)/fc1(DTIMES(:), 1))* &
-                                   (fc4(DTIMES(:), 1) + &
-                                     (Y - 1.0_dp)*( fc4(DTIMES(:), 1) - &
-                                     (fc2(DTIMES(:), 1)**2 + & 
-                                     fc3(DTIMES(:), 1)**2)/ &
-                                     (2.0_dp*fc1(DTIMES(:), 1))))
+    tree%boxes(id)%fc(:,:,1,if4) = avgFluxLR(fc1,fc2,fc3,fc4,41, nc) - &
+                                   0.5_dp*locWSp(DTIMES(:),1)* & 
+                                   (fc4(DTIMES(:), 2) - fc4(DTIMES(:), 1))
                                      
-    tree%boxes(id)%fc(:,:,2,if4) = (fc3(DTIMES(:), 2)/fc1(DTIMES(:), 2))*( & 
-                                   fc4(DTIMES(:), 2) + &
-                                     (Y - 1.0_dp)*( fc4(DTIMES(:), 2) - &
-                                     (fc2(DTIMES(:), 2)**2 + & 
-                                     fc3(DTIMES(:), 2)**2)/ &
-                                     (2.0_dp*fc1(DTIMES(:), 2))))
+    tree%boxes(id)%fc(:,:,2,if4) = avgFluxTB(fc1,fc2,fc3,fc4,42, nc) - &
+                                   0.5_dp*locWSp(DTIMES(:),2)* & 
+                                   (fc4(DTIMES(:), 4) - fc4(DTIMES(:), 3))
 
     
   end subroutine fluxComputation
   !=====================================================================
-  elemental function eulerFluxMod(c1, c2, c3, c4, eqno) result(flux)
+  function avgFluxLR(fc1, fc2, fc3, fc4, eqno, nc) result(avgFlux)
+    integer, intent(in) :: nc
+    real(dp), intent(in), dimension(DTIMES(1:nc+1), 2*NDIM) :: fc1, fc2, fc3, fc4
+    integer, intent(in) :: eqno
+    real(dp) :: avgFlux(DTIMES(1:nc+1))
+    
+    avgFlux = 0.5_dp*( eulerFlux(fc1(DTIMES(:),1), fc2(DTIMES(:),1), & 
+                                 fc3(DTIMES(:),1), fc4(DTIMES(:),1), eqno) + &
+                       eulerFlux(fc1(DTIMES(:),2), fc2(DTIMES(:),2), & 
+                                 fc3(DTIMES(:),2), fc4(DTIMES(:),2), eqno))
+  end function avgFluxLR
+  
+  !=====================================================================
+  function avgFluxTB(fc1, fc2, fc3, fc4, eqno, nc) result(avgFlux)
+    integer, intent(in) :: nc
+    real(dp), intent(in), dimension(DTIMES(1:nc+1), 2*NDIM) :: fc1, fc2, fc3, fc4
+    integer, intent(in) :: eqno
+    real(dp) :: avgFlux(DTIMES(1:nc+1))
+    
+    avgFlux = 0.5_dp*( eulerFlux(fc1(DTIMES(:),3), fc2(DTIMES(:),3), & 
+                                 fc3(DTIMES(:),3), fc4(DTIMES(:),3), eqno) + &
+                       eulerFlux(fc1(DTIMES(:),4), fc2(DTIMES(:),4), & 
+                                 fc3(DTIMES(:),4), fc4(DTIMES(:),4), eqno))
+                                 
+  end function avgFluxTB
+  !=====================================================================
+  elemental function eulerFlux(c1, c2, c3, c4, eqno) result(flux)
     real(dp), intent(in) :: c1, c2, c3, c4
     integer, intent(in) :: eqno
     real(dp) :: flux
@@ -278,7 +306,7 @@ program KT_euler
         flux = (c3/c1)*(c4 + (Y-1.0_dp)*(c4 - (c2**2 + c3**2)/(2.0_dp*c1)))
     end select
   
-  end function eulerFluxMod
+  end function eulerFlux
   
   !=====================================================================
   subroutine waveSpeed_2d( fc1, fc2, fc3, fc4, a, nc )
@@ -291,9 +319,10 @@ program KT_euler
     real(dp) :: u_int(1:nc+1), u_out(1:nc+1), v_int(1:nc+1), v_out(nc+1)
     real(dp) :: p_int(1:nc+1), p_out(1:nc+1), c_int(1:nc+1), c_out(1:nc+1)
     integer :: n
-    
-    do n=1,nc
+   
+    do n=1,nc+1
       !x-dir
+      !print *, product(fc1(:,n,1))
       u_int(:) = fc2(:,n,1)/fc1(:,n,1)
       u_out(:) = fc2(:,n,2)/fc1(:,n,2)
       p_int(:) = (Y-1.0_dp)*(fc4(:,n,1) - (fc2(:,n,1)**2 + fc3(:,n,1)**2)/ & 
@@ -307,8 +336,8 @@ program KT_euler
                   max(abs(u_out(:) + c_out(:)), abs(u_out(:) - c_out(:)), abs(c_out(:))))
                   
                   
-      u_int(:) = fc2(n,:,1)/fc1(n,:,1)
-      u_out(:) = fc2(n,:,2)/fc1(n,:,2)
+      v_int(:) = fc2(n,:,1)/fc1(n,:,1)
+      v_out(:) = fc2(n,:,2)/fc1(n,:,2)
       p_int(:) = (Y-1.0_dp)*(fc4(n,:,1) - (fc2(n,:,1)**2 + fc3(n,:,1)**2)/ & 
                                           (2.0_dp*fc1(:,n,1)))
       p_out(:) = (Y-1.0_dp)*(fc4(n,:,2) - (fc2(n,:,2)**2 + fc3(n,:,2)**2)/ & 
@@ -316,29 +345,14 @@ program KT_euler
       c_int(:) = sqrt((Y - p_int)/fc1(n,:,1))
       c_out(:) = sqrt((Y - p_out)/fc1(n,:,2))
       a(:,n, 2) = max( & 
-                  max(abs(u_int(:) + c_int(:)), abs(u_int(:) - c_int(:)), abs(c_int(:))), &
-                  max(abs(u_out(:) + c_out(:)), abs(u_out(:) - c_out(:)), abs(c_out(:))))
+                  max(abs(v_int(:) + c_int(:)), abs(v_int(:) - c_int(:)), abs(c_int(:))), &
+                  max(abs(v_out(:) + c_out(:)), abs(v_out(:) - c_out(:)), abs(c_out(:))))
       
     end do
     
   
   end subroutine waveSpeed_2d
   
-  subroutine waveSpeed_1d( a, uint, cout, pint, cout , nc)
-    integer, intent(in) :: nc
-    real(dp), intent(inout) :: a(1:nc+1)
-    real(dp), intent(in) :: uint(1:nc+1), uout(1:nc+1), & 
-                            cint(1:nc+1), cout(1:nc+1)
-    real(dp) :: eigVals_int(1:nc+1,3), eigVals_out(1:nc+1,3)
-    
-    eigVals_int(:,1) = abs(uint(:) + cint(:))
-    eigVals_int(:,2) = abs(uint(:) - cint(:))
-    eigVals_int(:,3) = abs(cint(:))
-    
-    
-    
-    
-  end subroutine waveSpeed_1d
   !=====================================================================
   
   subroutine updateSoln( box, dt )
@@ -355,7 +369,7 @@ program KT_euler
                     box%cc(i-1,j,ic1) + &
                     box%cc(i,j+1,ic1) + &
                     box%cc(i,j-1,ic1))
-        box%cc(i,j,ic1) = avg - 0.5_dp*dt(1) *( &
+        box%cc(i,j,ic1) = box%cc(i,j, ic1) - dt(1) *( &
                           inv_dr(1)*( &
                           box%fc(i+1,j,1,if1) - box%fc(i,j,1,if1)) + &
                           inv_dr(2)*( &
@@ -364,7 +378,7 @@ program KT_euler
                     box%cc(i-1,j,ic2) + &
                     box%cc(i,j+1,ic2) + &
                     box%cc(i,j-1,ic2))
-       box%cc(i,j,ic2) = avg - 0.5_dp*dt(1) *( &
+       box%cc(i,j,ic2) = box%cc(i,j, ic2) - dt(1) *( &
                           inv_dr(1)*( &
                           box%fc(i+1,j,1,if2) - box%fc(i,j,1,if2)) + &
                           inv_dr(2)*( &
@@ -374,7 +388,7 @@ program KT_euler
                     box%cc(i-1,j,ic3) + &
                     box%cc(i,j+1,ic3) + &
                     box%cc(i,j-1,ic3))
-       box%cc(i,j,ic3) = avg - 0.5_dp*dt(1) *( &
+       box%cc(i,j,ic3) = box%cc(i,j, ic3) - dt(1) *( &
                           inv_dr(1)*( &
                           box%fc(i+1,j,1,if3) - box%fc(i,j,1,if3)) + &
                           inv_dr(2)*( &
@@ -384,7 +398,7 @@ program KT_euler
                     box%cc(i-1,j,ic4) + &
                     box%cc(i,j+1,ic4) + &
                     box%cc(i,j-1,ic4))
-       box%cc(i,j,ic4) = avg - 0.5_dp*dt(1) *( &
+       box%cc(i,j,ic4) = box%cc(i,j, ic4) - dt(1) *( &
                           inv_dr(1)*( &
                           box%fc(i+1,j,1,if4) - box%fc(i,j,1,if4)) + &
                           inv_dr(2)*( &

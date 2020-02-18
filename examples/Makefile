@@ -14,7 +14,7 @@ PROGS_XD := random_refinement poisson_basic poisson_benchmark advection		\
 
 PROGS_2D := $(PROGS_XD:%=%_2d) poisson_cyl poisson_cyl_dielectric	\
 simple_streamer poisson_cyl_analytic poisson_helmholtz_cyl h_domain_expts h_bc h_advection solid_body_rotation \
-amr_solid_body_rotation euler amr_euler
+amr_solid_body_rotation euler amr_euler KT_euler
 
 PROGS_3D := $(PROGS_XD:%=%_3d) poisson_div_cleaning
 
@@ -47,7 +47,7 @@ $(OUTDIR):
 $(PROGS_2D): $(AF_DIR)/lib_2d/libafivo.a | $(OUTDIR)
 $(PROGS_2D): INCDIRS+=$(AF_DIR)/lib_2d
 $(PROGS_2D): LIBDIRS+=$(AF_DIR)/lib_2d
-$(PROGS_2D): FFLAGS += -DNDIM=2
+$(PROGS_2D): FFLAGS += -DNDIM=2 
 
 $(PROGS_3D): $(AF_DIR)/lib_3d/libafivo.a | $(OUTDIR)
 $(PROGS_3D): INCDIRS+=$(AF_DIR)/lib_3d
