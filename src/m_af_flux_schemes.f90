@@ -12,6 +12,7 @@ module m_af_flux_schemes
   public :: flux_diff_1d, flux_diff_2d, flux_diff_3d
   public :: flux_koren_1d, flux_koren_2d, flux_koren_3d
   public :: flux_upwind_1d, flux_upwind_2d, flux_upwind_3d
+  public :: flux_kt_1d, flux_kurganovTadmor_2d
 
 contains
 
@@ -146,11 +147,15 @@ contains
     integer               :: n
     
     do n=1, nc+1
-      grad1 = cc(n) - cc(n-1)
-      grad2 = cc(n+1) - cc(n)
-      grad3 = cc(n+2) - cc(n+1)
-      vint(n) = v(n,1)*(cc(n) + 0.5_dp*koren_mlim(grad1, grad2)) !left
-      vout(n) = v(n,2)*(cc(n+1) - 0.5_dp*koren_mlim(grad2, grad3)) !right
+      !print *, grad1, grad2, grad3
+      grad1 = cc(n-1) - cc(n-2)
+      grad2 = cc(n) - cc(n-1)
+      grad3 = cc(n+1) - cc(n)
+      vint(n) = vint(n)*(cc(n-1) + 0.5_dp*koren_mlim(grad1, grad2)) !left
+      vout(n) = vout(n)*(cc(n) - 0.5_dp*koren_mlim(grad2, grad3)) !right
+      !vint(n) = vint(n)*(cc(n-1) + 0.5_dp*vanLeer_mlim(grad1, grad2)) !left
+      !vout(n) = vout(n)*(cc(n) - 0.5_dp*vanLeer_mlim(grad2, grad3)) !right
+      
     end do
   end subroutine flux_kt_1d
 
@@ -162,9 +167,10 @@ contains
     real(dp), intent(inout) :: v(1:nc+1, 1:nc+1, 4)
     real(dp) :: cc_1d(1-ngc:nc+ngc), v_1d(1:nc+1, 2)
     integer :: n
-    do n = 1, nc
+    do n = 1, nc+1
       ! x-fluxes
-      call flux_kt_1d(cc, v(:,n,1), v(:,n,2), nc, ngc)
+      !print *, n
+      call flux_kt_1d(cc(:,n), v(:,n,1), v(:,n,2), nc, ngc)
       
       !y-fluxes
       cc_1d = cc(n, :)
@@ -224,6 +230,7 @@ contains
 
     aa = a * a
     ab = a * b
+    
 
     if (ab <= 0) then
        ! a and b have different sign or one of them is zero, so r is either 0,
@@ -240,6 +247,14 @@ contains
        bphi = b
     end if
   end function koren_mlim
+  
+  elemental function vanLeer_mlim(a, b) result(phi)
+    real(dp), intent(in) :: a
+    real(dp), intent(in) :: b
+    real(dp) :: phi
+    phi = (2.0_dp*max(0.0_dp, a*b))/(a + b + epsilon(1.0_dp))
+  
+  end function vanLeer_mlim
 
   !> Compute flux with first order upwind scheme
   subroutine flux_upwind_1d(cc, v, nc, ngc)
