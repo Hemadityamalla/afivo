@@ -26,10 +26,10 @@ program h_advection
         real(dp) :: velocity(NDIM), dr_min(NDIM)
 
         domain_len(:) = 1.0_dp
-        domain_len(1) = 2.0_dp
+        domain_len(1) = 1.0_dp
 
-        grid_size(:) = 4*ncells
-        grid_size(1) = 8*ncells
+        grid_size(:) = 1*ncells
+        grid_size(1) = 1*ncells
 
         periodicBCs(:) = .true.
         periodicBCs(2) = .false.
@@ -69,18 +69,18 @@ program h_advection
 
         call af_write_silo(tree, "h_advection_2d_0", dir="output")
         !One level of refinement
-        call af_adjust_refinement(tree, refine_routine, refine_info, 1)
+!        call af_adjust_refinement(tree, refine_routine, refine_info, 1)
 
-        call af_restrict_tree(tree, iphi)
+!        call af_restrict_tree(tree, iphi)
 
-        call af_gc_tree(tree, [iphi])
+!        call af_gc_tree(tree, [iphi])
         
         !Add the initial stuff
         call af_tree_sum_cc(tree, iphi, sum_phi_t0)
 
         call af_write_silo(tree, "h_advection_2d_1", dir="output")
         !Start integration
-        n_steps = 1!int(end_time/dt)
+        n_steps = int(end_time/dt)
         do i=1,n_steps
                 call af_tree_copy_cc(tree, iphi, iphi_old)
                 call  af_loop_boxes(tree, korenFlux)
@@ -165,6 +165,7 @@ program h_advection
 
                 do j=1,nc
                         do i=1,nc
+                                
                                 box%cc(i,j,iphi) = box%cc(i,j,iphi)- dt(1)*( &
                                 inv_dr(1)*( &
                                 box%fc(i+1,j,1,iphi)-box%fc(i,j,1,iphi)) &

@@ -167,7 +167,7 @@ contains
     real(dp), intent(inout) :: v(1:nc+1, 1:nc+1, 4)
     real(dp) :: cc_1d(1-ngc:nc+ngc), v_1d(1:nc+1, 2)
     integer :: n
-    do n = 1, nc+1
+    do n = 1, nc
       ! x-fluxes
       !print *, n
       call flux_kt_1d(cc(:,n), v(:,n,1), v(:,n,2), nc, ngc)
