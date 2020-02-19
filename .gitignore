@@ -80,3 +80,4 @@ documentation/html/*
 /examples/dielectric_surface_3d
 /documentation/auto/
 /examples/blah/*.curve
+/examples/vgcore*
