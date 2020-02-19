@@ -22,15 +22,15 @@ program KT_euler
   print *, "Running Euler 2D with KT scheme"
   print *, "Number of threads", af_get_max_threads()
   
-  !p = (/1.0_dp, 0.4_dp, 0.0439_dp, 0.15_dp/)
-  !rho = (/1.0_dp, 0.5197_dp, 0.1072_dp, 0.2579_dp/)
-  !u = (/0.0_dp, -0.7259_dp, -0.7259_dp, 0.0_dp/)
-  !v = (/0.0_dp, 0.0_dp, -1.4045_dp, -1.4045_dp/)
+  p = (/1.0_dp, 0.4_dp, 0.0439_dp, 0.15_dp/)
+  rho = (/1.0_dp, 0.5197_dp, 0.1072_dp, 0.2579_dp/)
+  u = (/0.0_dp, -0.7259_dp, -0.7259_dp, 0.0_dp/)
+  v = (/0.0_dp, 0.0_dp, -1.4045_dp, -1.4045_dp/)
 
-  rho = (/0.125_dp, 1.0_dp, 1.0_dp, 0.125_dp/)
-  p = (/0.1_dp, 1.0_dp, 1.0_dp, 0.1_dp/)
-  u = (/0.0_dp, 0.0_dp, 0.0_dp, 0.0_dp/)
-  v = (/0.0_dp, 0.0_dp, 0.0_dp, 0.0_dp/)
+!  rho = (/0.125_dp, 1.0_dp, 1.0_dp, 0.125_dp/)
+!  p = (/0.1_dp, 1.0_dp, 1.0_dp, 0.1_dp/)
+!  u = (/0.0_dp, 0.0_dp, 0.0_dp, 0.0_dp/)
+!  v = (/0.0_dp, 0.0_dp, 0.0_dp, 0.0_dp/)
 
   
   wSp = calc_speed(rho, u, v, p)
@@ -193,7 +193,7 @@ program KT_euler
     allocate(fc4(DTIMES(1:nc+1), 2*NDIM))
     
     allocate(locWSp(DTIMES(1:nc+1), NDIM))
-    cc = 0
+    !cc = 0
     call af_gc2_box(tree, id, [ic1, ic2, ic3, ic4], cc)
     fc1 = 1.0_dp
     fc2 = 1.0_dp
