@@ -6,7 +6,10 @@ program KT_euler
   
   integer, parameter :: ncells = 8
   integer :: ic1, ic2, ic3, ic4
+<<<<<<< HEAD
   integer :: ip2, ip3, ip4
+=======
+>>>>>>> a1c80800d4325908179a9e59fcfccdaa36210d61
   integer :: if1, if2, if3, if4
   integer, parameter :: coord_type = af_xyz
   real(dp) :: l_max(NDIM), l_min(NDIM)
@@ -14,12 +17,17 @@ program KT_euler
   logical :: periodicBC(NDIM)
   real(dp), parameter :: Y = 1.4_dp
   real(dp):: p(4), rho(4), u(4), v(4)
+<<<<<<< HEAD
   real(dp) :: wSp, error
+=======
+  real(dp) :: wSp, dr_min, error, test
+>>>>>>> a1c80800d4325908179a9e59fcfccdaa36210d61
   
   type(af_t) :: tree
   real(dp) :: dt, time, end_time
   integer :: t_iter
   character(len=100) :: fname
+<<<<<<< HEAD
   
   !AMR stuff
   type(ref_info_t) :: refine_info
@@ -46,19 +54,38 @@ program KT_euler
   p = (/0.1_dp, 1.0_dp, 1.0_dp, 0.1_dp/)
   u = (/0.0_dp, 0.0_dp, 0.0_dp, 0.0_dp/)
   v = (/0.0_dp, 0.0_dp, 0.0_dp, 0.0_dp/)
+=======
+  print *, "Running Euler 2D with KT scheme"
+  print *, "Number of threads", af_get_max_threads()
+  
+  p = (/1.0_dp, 0.4_dp, 0.0439_dp, 0.15_dp/)
+  rho = (/1.0_dp, 0.5197_dp, 0.1072_dp, 0.2579_dp/)
+  u = (/0.0_dp, -0.7259_dp, -0.7259_dp, 0.0_dp/)
+  v = (/0.0_dp, 0.0_dp, -1.4045_dp, -1.4045_dp/)
+
+!  rho = (/0.125_dp, 1.0_dp, 1.0_dp, 0.125_dp/)
+!  p = (/0.1_dp, 1.0_dp, 1.0_dp, 0.1_dp/)
+!  u = (/0.0_dp, 0.0_dp, 0.0_dp, 0.0_dp/)
+!  v = (/0.0_dp, 0.0_dp, 0.0_dp, 0.0_dp/)
+>>>>>>> a1c80800d4325908179a9e59fcfccdaa36210d61
 
   
   wSp = calc_speed(rho, u, v, p)
   
   
   
+<<<<<<< HEAD
   grid(:) = 5*ncells
+=======
+  grid(:) = 20*ncells
+>>>>>>> a1c80800d4325908179a9e59fcfccdaa36210d61
   l_max(:) = 1.0_dp
   l_min(:) = 0.0_dp
   periodicBC(:) = .false.
   
   call af_add_cc_variable(tree, "rho", ix=ic1)
   call af_add_cc_variable(tree, "rhoU", ix=ic2)
+<<<<<<< HEAD
   !ip2 = ic2+1
   call af_add_cc_variable(tree, "rhoV", ix=ic3)
   !ip3 = ic3+1
@@ -68,6 +95,10 @@ program KT_euler
   call af_add_cc_variable(tree, "E", ix=ic4)
   !ip4 = ic4+1
   
+=======
+  call af_add_cc_variable(tree, "rhoV", ix=ic3)
+  call af_add_cc_variable(tree, "E", ix=ic4)
+>>>>>>> a1c80800d4325908179a9e59fcfccdaa36210d61
 
   call af_add_fc_variable(tree, "flux1", ix=if1)
   call af_add_fc_variable(tree, "flux2", ix=if2)
@@ -82,6 +113,7 @@ program KT_euler
   call af_init(tree, ncells, l_max, grid, &
                periodic = periodicBC, r_min= l_min, &
                coord = coord_type)
+<<<<<<< HEAD
 
   
   !Init mesh refinement
@@ -100,11 +132,21 @@ program KT_euler
   call af_restrict_tree(tree, ic4)
   call af_gc_tree(tree, [ic1, ic2, ic3, ic4])
   
+=======
+               
+  call af_loop_box(tree, setInitConds)
+  
+  call af_gc_tree(tree, [ic1, ic2, ic3, ic4])
+  
+  !call af_write_silo(tree, 'eulerInit', dir='output')
+  
+>>>>>>> a1c80800d4325908179a9e59fcfccdaa36210d61
   !Setting the timestep data
   time = 0.0_dp
   end_time = 0.2_dp
   t_iter = 0
   do 
+<<<<<<< HEAD
    !Updating the primitive vars
    !call af_tree_copy_cc(tree, ic2, ip2)
    !call af_tree_copy_cc(tree, ic3, ip3)
@@ -112,12 +154,17 @@ program KT_euler
    !call af_loop_box(tree, updatePrimitives)
    dr_min = af_min_dr(tree)
    dt = 0.2_dp/(sum(wSp/dr_min) + epsilon(1.0_dp))
+=======
+   dr_min = af_min_dr(tree)
+   dt = 0.2_dp/(wSp/dr_min) + epsilon(1.0_dp)
+>>>>>>> a1c80800d4325908179a9e59fcfccdaa36210d61
     if (mod(t_iter, 10) == 0) then
       write(fname, "(A,I0)") "KT_euler_" // DIMNAME // "_", t_iter
       call af_write_silo(tree, trim(fname), t_iter, time, dir="output")
     end if
   
    call af_loop_tree(tree, fluxComputation)
+<<<<<<< HEAD
    call af_consistent_fluxes(tree, [ic1,ic2, ic3, ic4])
    call af_loop_box_arg(tree, updateSoln, [dt])
    call af_restrict_tree(tree, ic1)
@@ -127,12 +174,21 @@ program KT_euler
    call af_gc_tree(tree, [ic1, ic2, ic3, ic4])
    call af_adjust_refinement(tree, ref_rout, refine_info, 1)
    
+=======
+   call af_loop_box_arg(tree, updateSoln, [dt])
+   call af_gc_tree(tree, [ic1, ic2, ic3, ic4])
+>>>>>>> a1c80800d4325908179a9e59fcfccdaa36210d61
     
    t_iter = t_iter + 1
    time = time + dt
    
    
    call af_tree_maxabs_cc(tree, ic1, error)
+<<<<<<< HEAD
+=======
+   call af_tree_max_fc(tree, 1, if4, test)
+   !print *, "Max value of fc: ", test
+>>>>>>> a1c80800d4325908179a9e59fcfccdaa36210d61
    if (error > 10.0_dp) then
     print *, "solution diverging!"
     exit
@@ -173,6 +229,7 @@ program KT_euler
     c(4) = (p/(Y-1.0_dp)) + 0.5_dp*rho*(u**2 + v**2)
     
   end function convert_to_conservatives
+<<<<<<< HEAD
   !======================================================
   subroutine updatePrimitives( box )
     type(box_t), intent(inout) :: box
@@ -219,6 +276,8 @@ program KT_euler
 !    
 !    
 !  end subroutine updatePrimitives
+=======
+>>>>>>> a1c80800d4325908179a9e59fcfccdaa36210d61
   !=====================================================================
   
   subroutine setInitConds( box )
@@ -238,36 +297,48 @@ program KT_euler
         box%cc(IJK, ic2) = conservatives(2)
         box%cc(IJK, ic3) = conservatives(3)
         box%cc(IJK, ic4) = conservatives(4)
+<<<<<<< HEAD
 !        box%cc(IJK, ip2) = u(1)
 !        box%cc(IJK, ip3) = v(1)
 !        box%cc(IJK, ip4) = p(1)
+=======
+>>>>>>> a1c80800d4325908179a9e59fcfccdaa36210d61
       elseif (rr(1) .le. 0.5_dp .and. rr(2) .ge. 0.5_dp) then
         conservatives = convert_to_conservatives(rho(2), u(2), v(2), p(2))
         box%cc(IJK, ic1) = conservatives(1)
         box%cc(IJK, ic2) = conservatives(2)
         box%cc(IJK, ic3) = conservatives(3)
         box%cc(IJK, ic4) = conservatives(4)
+<<<<<<< HEAD
 !        box%cc(IJK, ip2) = u(2)
 !        box%cc(IJK, ip3) = v(2)
 !        box%cc(IJK, ip4) = p(2)
+=======
+>>>>>>> a1c80800d4325908179a9e59fcfccdaa36210d61
       elseif (rr(1) .le. 0.5_dp .and. rr(2) .le. 0.5_dp) then
         conservatives = convert_to_conservatives(rho(3), u(3), v(3), p(3))
         box%cc(IJK, ic1) = conservatives(1)
         box%cc(IJK, ic2) = conservatives(2)
         box%cc(IJK, ic3) = conservatives(3)
         box%cc(IJK, ic4) = conservatives(4)
+<<<<<<< HEAD
 !        box%cc(IJK, ip2) = u(3)
 !        box%cc(IJK, ip3) = v(3)
 !        box%cc(IJK, ip4) = p(3)
+=======
+>>>>>>> a1c80800d4325908179a9e59fcfccdaa36210d61
       else
         conservatives = convert_to_conservatives(rho(4), u(4), v(4), p(4))
         box%cc(IJK, ic1) = conservatives(1)
         box%cc(IJK, ic2) = conservatives(2)
         box%cc(IJK, ic3) = conservatives(3)
         box%cc(IJK, ic4) = conservatives(4)
+<<<<<<< HEAD
 !        box%cc(IJK, ip2) = u(4)
 !        box%cc(IJK, ip3) = v(4)
 !        box%cc(IJK, ip4) = p(4)
+=======
+>>>>>>> a1c80800d4325908179a9e59fcfccdaa36210d61
       end if
     end do; CLOSE_DO
   end subroutine setInitConds
@@ -509,6 +580,7 @@ program KT_euler
       end do
     end do
   end subroutine updateSoln
+<<<<<<< HEAD
   !======================================================
   subroutine ref_rout( box, cell_flags )
     type(box_t), intent(in) :: box
@@ -533,6 +605,8 @@ program KT_euler
   
     
   end subroutine ref_rout
+=======
+>>>>>>> a1c80800d4325908179a9e59fcfccdaa36210d61
   
 
 end program KT_euler

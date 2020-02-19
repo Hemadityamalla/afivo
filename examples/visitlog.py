@@ -1994,6 +1994,7 @@ SaveWindowAtts.opts.types = ()
 SaveWindowAtts.opts.help = ""
 SetSaveWindowAttributes(SaveWindowAtts)
 SaveWindow()
+<<<<<<< HEAD
 SetTimeSliderState(19)
 SaveWindowAtts = SaveWindowAttributes()
 SaveWindowAtts.outputToCurrentDirectory = 0
@@ -5114,3 +5115,5 @@ SaveWindowAtts.opts.types = ()
 SaveWindowAtts.opts.help = ""
 SetSaveWindowAttributes(SaveWindowAtts)
 SaveWindow()
+=======
+>>>>>>> a1c80800d4325908179a9e59fcfccdaa36210d61
