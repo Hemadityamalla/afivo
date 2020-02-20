@@ -151,11 +151,13 @@ contains
       grad1 = cc(n-1) - cc(n-2)
       grad2 = cc(n) - cc(n-1)
       grad3 = cc(n+1) - cc(n)
-      vint(n) = vint(n)*(cc(n-1) + 0.5_dp*koren_mlim(grad1, grad2)) !left
-      vout(n) = vout(n)*(cc(n) - 0.5_dp*koren_mlim(grad2, grad3)) !right
+      !vint(n) = vint(n)*(cc(n-1) + 0.5_dp*koren_mlim(grad1, grad2)) !left
+      !vout(n) = vout(n)*(cc(n) - 0.5_dp*koren_mlim(grad2, grad3)) !right
       !vint(n) = vint(n)*(cc(n-1) + 0.5_dp*vanLeer_mlim(grad1, grad2)) !left
       !vout(n) = vout(n)*(cc(n) - 0.5_dp*vanLeer_mlim(grad2, grad3)) !right
       
+      vint(n) = vint(n)*(cc(n-1) + 0.5_dp*minmod_mlim(grad1, grad2)) !left
+      vout(n) = vout(n)*(cc(n) - 0.5_dp*minmod_mlim(grad2, grad3)) !right
     end do
   end subroutine flux_kt_1d
 
@@ -255,6 +257,16 @@ contains
     phi = (2.0_dp*max(0.0_dp, a*b))/(a + b + epsilon(1.0_dp))
   
   end function vanLeer_mlim
+
+
+  elemental function minmod_mlim(a, b) result(phi)
+    real(dp), intent(in) :: a
+    real(dp), intent(in) :: b
+    real(dp) :: phi
+    phi = 0.5_dp*(dsign(1.0_dp, a) + dsign(1.0_dp, b))* &
+          dmin1(abs(a), abs(b))
+  
+  end function minmod_mlim
 
   !> Compute flux with first order upwind scheme
   subroutine flux_upwind_1d(cc, v, nc, ngc)
