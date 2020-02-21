@@ -52,7 +52,7 @@ program KT_euler
   
   
   
-  grid(:) = 25*ncells
+  grid(:) = 50*ncells
   l_max(:) = 1.0_dp
   l_min(:) = 0.0_dp
   periodicBC(:) = .false.
@@ -114,8 +114,7 @@ program KT_euler
    dt = end_time/(sum(wSp/dr_min) + epsilon(1.0_dp))
     if (mod(t_iter, 10) == 0) then
       write(fname, "(A,I0)") "KT_euler_" // DIMNAME // "_", t_iter
-      call af_write_silo(tree, trim(fname), t_iter, time, dir="output", &
-           add_vars = writePrimitives, add_names=["xVel","yVel","pres"])
+      call af_write_silo(tree, trim(fname), t_iter, time, dir="output")
     end if
   
    call af_loop_tree(tree, fluxComputation)
@@ -536,24 +535,6 @@ program KT_euler
   
     
   end subroutine ref_rout
-  
-  !=====================================================================
-  subroutine writePrimitives( box, new_vars, n_var )
-    type(box_t), intent(in):: box
-    integer, intent(in) :: n_var
-    real(dp) :: new_vars(DTIMES(0:box%n_cell+1),n_var)
-    
-    !XVelocity
-    new_vars(DTIMES(:), 1) = box%cc(DTIMES(:), ic2)/box%cc(DTIMES(:), ic1)
-    !YVelocity
-    new_vars(DTIMES(:), 2) = box%cc(DTIMES(:), ic3)/box%cc(DTIMES(:), ic1)
-    !Pressure
-    new_vars(DTIMES(:), 3) = (Y-1.0_dp)*(box%cc(DTIMES(:), ic4) - &
-                             (box%cc(DTIMES(:), ic2)**2 + & 
-                              box%cc(DTIMES(:), ic3)**2) & 
-                             /(2.0_dp*box%cc(DTIMES(:), ic1)))
-    
-  end subroutine writePrimitives
   
 
 end program KT_euler
