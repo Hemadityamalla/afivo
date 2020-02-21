@@ -432,8 +432,8 @@ program KT_euler
                                           (2.0_dp*fc1(:,n,1)))
       p_out(:) = (Y-1.0_dp)*(fc4(:,n,2) - (fc2(:,n,2)**2 + fc3(:,n,2)**2)/ & 
                                           (2.0_dp*fc1(:,n,2)))
-      c_int(:) = sqrt((Y - p_int)/fc1(:,n,1))
-      c_out(:) = sqrt((Y - p_out)/fc1(:,n,2))
+      c_int(:) = sqrt((Y * p_int)/fc1(:,n,1))
+      c_out(:) = sqrt((Y * p_out)/fc1(:,n,2))
       a(:,n, 1) = max( & 
                   max(abs(u_int(:) + c_int(:)), abs(u_int(:) - c_int(:)), abs(c_int(:))), &
                   max(abs(u_out(:) + c_out(:)), abs(u_out(:) - c_out(:)), abs(c_out(:))))
