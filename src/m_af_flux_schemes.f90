@@ -136,30 +136,29 @@ contains
        v(n, :, 2) = v_1d     ! Copy result
     end do
   end subroutine flux_koren_2d
-  
-  subroutine flux_kt_1d( cc, vint, vout, nc, ngc )
-    integer, intent(in)   :: nc               !< Number of cells
-    integer, intent(in)   :: ngc              !< Number of ghost cells
-    real(dp), intent(in)  :: cc(1-ngc:nc+ngc) !< Cell-centered values
-    !> Input: velocities at interfaces, output: fluxes
-    real(dp), intent(inout)  :: vint(1:nc+1), vout(1:nc+1)
-    real(dp)              :: grad1, grad2, grad3
-    integer               :: n
-    
+
+  subroutine reconstruct_lr_1d(nc, ngc, n_var, cc, u_lr)
+    integer, intent(in)     :: nc               !< Number of cells
+    integer, intent(in)     :: ngc              !< Number of ghost cells
+    integer, intent(in)     :: n_var            !< Number of variables
+    real(dp), intent(in)    :: cc(1-ngc:nc+ngc, n_vars) !< Cell-centered values
+    !> Reconstructed (left, right) values at every interface
+    real(dp), intent(inout) :: u_lr(1:nc+1, 2, n_vars)
+    real(dp)                :: grad1(n_var), grad2(n_var), grad3(n_var)
+    integer                 :: n
+
     do n=1, nc+1
-      !print *, grad1, grad2, grad3
-      grad1 = cc(n-1) - cc(n-2)
-      grad2 = cc(n) - cc(n-1)
-      grad3 = cc(n+1) - cc(n)
+      grad1 = cc(n-1, :) - cc(n-2, :)
+      grad2 = cc(n, :) - cc(n-1, :)
+      grad3 = cc(n+1, :) - cc(n, :)
       !vint(n) = vint(n)*(cc(n-1) + 0.5_dp*koren_mlim(grad1, grad2)) !left
       !vout(n) = vout(n)*(cc(n) - 0.5_dp*koren_mlim(grad2, grad3)) !right
       !vint(n) = vint(n)*(cc(n-1) + 0.5_dp*vanLeer_mlim(grad1, grad2)) !left
       !vout(n) = vout(n)*(cc(n) - 0.5_dp*vanLeer_mlim(grad2, grad3)) !right
-      
-      vint(n) = vint(n)*(cc(n-1) + 0.5_dp*minmod_mlim(grad1, grad2)) !left
-      vout(n) = vout(n)*(cc(n) - 0.5_dp*minmod_mlim(grad2, grad3)) !right
+      u_lr(n, 1, :) = cc(n-1, :) + 0.5_dp*minmod_mlim(grad1, grad2) !left
+      u_lr(n, 2, :) = cc(n, :) - 0.5_dp*minmod_mlim(grad2, grad3) !right
     end do
-  end subroutine flux_kt_1d
+  end subroutine reconstruct_lr_1d
 
   !> Compute flux for the KT scheme
   subroutine flux_kurganovTadmor_2d( cc, v, nc, ngc )
@@ -169,6 +168,7 @@ contains
     real(dp), intent(inout) :: v(1:nc+1, 1:nc+1, 4)
     real(dp) :: cc_1d(1-ngc:nc+ngc), v_1d(1:nc+1, 2)
     integer :: n
+
     do n = 1, nc
       ! x-fluxes
       !print *, n
@@ -262,10 +262,9 @@ contains
   elemental function minmod_mlim(a, b) result(phi)
     real(dp), intent(in) :: a
     real(dp), intent(in) :: b
-    real(dp) :: phi
-    phi = 0.5_dp*(dsign(1.0_dp, a) + dsign(1.0_dp, b))* &
-          dmin1(abs(a), abs(b))
-  
+    real(dp)             :: phi
+    phi = 0.5_dp*(sign(1.0_dp, a) + sign(1.0_dp, b)) * &
+          min(abs(a), abs(b))
   end function minmod_mlim
 
   !> Compute flux with first order upwind scheme
