@@ -12,7 +12,7 @@ module m_af_flux_schemes
   public :: flux_diff_1d, flux_diff_2d, flux_diff_3d
   public :: flux_koren_1d, flux_koren_2d, flux_koren_3d
   public :: flux_upwind_1d, flux_upwind_2d, flux_upwind_3d
-  public :: flux_kt_1d, flux_kurganovTadmor_2d
+  public :: flux_kurganovTadmor_1d, reconstruct_lr_1d
 
 contains
 
@@ -137,14 +137,14 @@ contains
     end do
   end subroutine flux_koren_2d
 
-  subroutine reconstruct_lr_1d(nc, ngc, n_var, cc, u_lr)
+  subroutine reconstruct_lr_1d(nc, ngc, n_vars, cc, u_lr)
     integer, intent(in)     :: nc               !< Number of cells
     integer, intent(in)     :: ngc              !< Number of ghost cells
-    integer, intent(in)     :: n_var            !< Number of variables
+    integer, intent(in)     :: n_vars            !< Number of variables
     real(dp), intent(in)    :: cc(1-ngc:nc+ngc, n_vars) !< Cell-centered values
     !> Reconstructed (left, right) values at every interface
     real(dp), intent(inout) :: u_lr(1:nc+1, 2, n_vars)
-    real(dp)                :: grad1(n_var), grad2(n_var), grad3(n_var)
+    real(dp)                :: grad1(n_vars), grad2(n_vars), grad3(n_vars)
     integer                 :: n
 
     do n=1, nc+1
@@ -161,28 +161,17 @@ contains
   end subroutine reconstruct_lr_1d
 
   !> Compute flux for the KT scheme
-  subroutine flux_kurganovTadmor_2d( cc, v, nc, ngc )
-    integer, intent(in) :: nc
-    integer, intent(in) :: ngc
-    real(dp), intent(in) :: cc(1-ngc:nc+ngc, 1-ngc:nc+ngc)
-    real(dp), intent(inout) :: v(1:nc+1, 1:nc+1, 4)
-    real(dp) :: cc_1d(1-ngc:nc+ngc), v_1d(1:nc+1, 2)
-    integer :: n
-
-    do n = 1, nc
-      ! x-fluxes
-      !print *, n
-      call flux_kt_1d(cc(:,n), v(:,n,1), v(:,n,2), nc, ngc)
-      
-      !y-fluxes
-      cc_1d = cc(n, :)
-      v_1d(:, 1) = v(n, :, 3)
-      v_1d(:, 2) = v(n, :, 4)
-      call flux_kt_1d(cc_1d, v_1d(:,1), v_1d(:,2), nc, ngc)
-      v(n,:,3) = v_1d(:,1)
-      v(n,:,4) = v_1d(:,2)
-    end do
-  end subroutine flux_kurganovTadmor_2d
+  subroutine flux_kurganovTadmor_1d( nf, n_vars, flux_lr, u_lr, w_lr, flux )
+    !integer, intent(in) :: nc
+    integer, intent(in) :: nf
+    integer, intent(in) :: n_vars
+    real(dp), intent(in) :: flux_lr(nf, 2, n_vars), u_lr(nf,2,n_vars)
+    real(dp), intent(in) :: w_lr(nf)
+    real(dp), intent(inout) :: flux(nf, n_vars)
+    
+    flux = 0.5_dp*(flux_lr(:,1,:) + flux_lr(:,2,:)) - &
+                spread(w_lr, 2,n_vars)*(u_lr(:,2,:) - u_lr(:,1,:))
+  end subroutine flux_kurganovTadmor_1d
 
 
 
