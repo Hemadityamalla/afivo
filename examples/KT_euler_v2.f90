@@ -315,7 +315,7 @@ program KT_euler
        prim_vars = cc(:, j, :)
        call reconstruct_lr_1d(nc, n_gc, n_var, prim_vars, u_lr)
        call get_max_wavespeed_lr_1d(nc+1, n_vars, 1, u_lr, w_lr)
-       call get_fluxes_lr_1d(u_lr, flux_lr)
+       call get_fluxes_lr_1d(nc+1, n_var, 1, u_lr, flux_lr)
        call flux_kt_1d(flux_lr, u_lr, w_lr, flux)
        tree%boxes(id)%fc(:, j, 1, :) = flux
     end do
@@ -325,7 +325,7 @@ program KT_euler
        prim_vars = cc(i, :, :)
        call reconstruct_lr_1d(nc, n_gc, n_vars, prim_vars, u_lr)
        call get_max_wavespeed_lr_1d(nc+1, n_vars, 2, u_lr, w_lr)
-       call get_fluxes_lr_1d(u_lr, flux_lr)
+       call get_fluxes_lr_1d(nc+1, n_var, 2, u_lr, flux_lr)
        call flux_kt_1d(flux_lr, u_lr, w_lr, flux)
        tree%boxes(id)%fc(i, :, 2, :) = flux
     end do
@@ -370,9 +370,9 @@ program KT_euler
   subroutine to_primitive( nc, n_vars, cc )
     integer, intent(in) :: nc, n_vars
     real(dp), intent(inout) :: cc(DTIMES(-1:nc+2), n_vars)
-    cc(DTIMES(:), 2) = cc(DTIMES(:), 2)/cc(DTIMES(:), 1)
-    cc(DTIMES(:), 3) = cc(DTIMES(:), 3)/cc(DTIMES(:), 1)
-    cc(DTIMES(:), 4) = (Y-1.0_dp)*( cc(DTIMES(:), 4) - &
+    cc(DTIMES(:), i_mom(1)) = cc(DTIMES(:), 2)/cc(DTIMES(:), 1)
+    cc(DTIMES(:), i_mom(2)) = cc(DTIMES(:), 3)/cc(DTIMES(:), 1)
+    cc(DTIMES(:), i_e) = (Y-1.0_dp)*( cc(DTIMES(:), 4) - &
                        0.5_dp*cc(DTIMES(:), 1)*(cc(DTIMES(:), 2)**2 + 
                                                 cc(DTIMES(:), 3)**2)) 
   end subroutine to_primitive
@@ -448,9 +448,30 @@ program KT_euler
     integer, intent(in)   :: flux_dim !< In which dimension fluxes are computed
     real(dp), intent(in)  :: u_lr(nf, 2, n_var)
     real(dp), intent(out) :: flux_lr(nf, 2, n_var)
+    real(dp) :: E(nf, 2)
 
     ! Compute left and right flux for conservative variables from the primitive
     ! reconstructed values.
+    flux_lr(:,:,i_rho) = u_lr(:,:,i_rho)*u_lr(:,:,i_mom(flux_dim))
+    if (flux_dim == 1) then
+      flux_lr(:,:, i_mom(1)) = u_lr(:,:,i_e) + &
+                               u_lr(:,:,i_rho)*u_lr(:,:,i_mom(flux_dim))**2      
+    else
+      flux_lr(:,:, i_mom(1)) = u_lr(:,:,i_rho)* & 
+                               u_lr(:,:,i_mom(1))*u_lr(:,:,i_mom(flux_diff))
+    endif
+    
+    if (flux_dim == 2) then
+      flux_lr(:,:, i_mom(2)) = u_lr(:,:,i_e) + &
+                               u_lr(:,:,i_rho)*u_lr(:,:,i_mom(flux_dim))**2      
+    else
+      flux_lr(:,:, i_mom(2)) = u_lr(:,:,i_rho)* & 
+                               u_lr(:,:,i_mom(1))*u_lr(:,:,i_mom(flux_diff))
+    endif
+    E = u_lr(:,:,i_e)/(Y-1.0_dp) + 0.5_dp*u_lr(:,:,i_rho)*(& 
+        u_lr(:,:,i_mom(1))**2 + u_lr(:,:,i_mom(2))**2)
+    flux_lr(:,:, i_e) = u_lr(:,:,i_mom(flux_dim))*(E + u_lr(:,:,i_e))    
+    
   end subroutine get_fluxes_lr_1d
 
   subroutine waveSpeed_2d( fc1, fc2, fc3, fc4, a, nc )
