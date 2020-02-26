@@ -5,6 +5,7 @@ program KT_euler
   implicit none
 
   integer, parameter :: n_vars   = 4
+  integer, parameter :: n_gc = 2
   integer, parameter :: i_rho    = 1
   integer, parameter :: i_mom(2) = [2, 3]
   integer, parameter :: i_e      = 4
@@ -231,8 +232,7 @@ program KT_euler
     type(box_t), intent(inout) :: box
     integer :: IJK, nc
     real(dp) :: rr(NDIM)
-    !real(dp) :: p(4), rho(4), u(4), v(4)
-    real(dp) :: conservatives(4)
+    !real(dp) :: conservatives(4)
 
 
     nc = box%n_cell
@@ -290,6 +290,10 @@ program KT_euler
                              fc3(DTIMES(:), :), &
                              fc4(DTIMES(:), :)
     real(dp), allocatable :: locWSp(DTIMES(:), :)
+    real(dp), allocatable :: prim_vars(:,:)
+    real(dp), allocatable :: u_lr(:,:,:), w_lr(:)
+    real(dp), allocatable :: flux_lr(:,:,:), flux(:,:,:)
+    
 
     nc = tree%boxes(id)%n_cell
     dr = tree%boxes(id)%dr !Not used
@@ -303,13 +307,14 @@ program KT_euler
     allocate(locWSp(DTIMES(1:nc+1), NDIM))
 
     call af_gc2_box(tree, id, [ic1, ic2, ic3, ic4], cc)
-    call to_primitive(nc, n_gc, cc)
+    !We need primitives at the ghost cells as they're used for reconstruction
+    call to_primitive(nc, n_vars, cc)
 
     ! x-direction
     do j = 1, nc
        prim_vars = cc(:, j, :)
        call reconstruct_lr_1d(nc, n_gc, n_var, prim_vars, u_lr)
-       call get_max_wavespeed_lr_1d(nc+1, n_gc, 1, u_lr, w_lr)
+       call get_max_wavespeed_lr_1d(nc+1, n_vars, 1, u_lr, w_lr)
        call get_fluxes_lr_1d(u_lr, flux_lr)
        call flux_kt_1d(flux_lr, u_lr, w_lr, flux)
        tree%boxes(id)%fc(:, j, 1, :) = flux
@@ -318,8 +323,8 @@ program KT_euler
     ! y-direction
     do i = 1, nc
        prim_vars = cc(i, :, :)
-       call reconstruct_lr_1d(nc, n_gc, n_var, prim_vars, u_lr)
-       call get_max_wavespeed_lr_1d(nc+1, n_var, 2, u_lr, w_lr)
+       call reconstruct_lr_1d(nc, n_gc, n_vars, prim_vars, u_lr)
+       call get_max_wavespeed_lr_1d(nc+1, n_vars, 2, u_lr, w_lr)
        call get_fluxes_lr_1d(u_lr, flux_lr)
        call flux_kt_1d(flux_lr, u_lr, w_lr, flux)
        tree%boxes(id)%fc(i, :, 2, :) = flux
@@ -361,6 +366,16 @@ program KT_euler
 
 
   end subroutine fluxComputation
+  
+  subroutine to_primitive( nc, n_vars, cc )
+    integer, intent(in) :: nc, n_vars
+    real(dp), intent(inout) :: cc(DTIMES(-1:nc+2), n_vars)
+    cc(DTIMES(:), 2) = cc(DTIMES(:), 2)/cc(DTIMES(:), 1)
+    cc(DTIMES(:), 3) = cc(DTIMES(:), 3)/cc(DTIMES(:), 1)
+    cc(DTIMES(:), 4) = (Y-1.0_dp)*( cc(DTIMES(:), 4) - &
+                       0.5_dp*cc(DTIMES(:), 1)*(cc(DTIMES(:), 2)**2 + 
+                                                cc(DTIMES(:), 3)**2)) 
+  end subroutine to_primitive
   !=====================================================================
   function avgFluxLR(fc1, fc2, fc3, fc4, eqno, nc) result(avgFlux)
     integer, intent(in) :: nc
