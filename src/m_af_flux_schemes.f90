@@ -168,12 +168,45 @@ contains
     real(dp), intent(in) :: flux_lr(nf, 2, n_vars), u_lr(nf,2,n_vars)
     real(dp), intent(in) :: w_lr(nf)
     real(dp), intent(inout) :: flux(nf, n_vars)
-    
+
     flux = 0.5_dp*(flux_lr(:,1,:) + flux_lr(:,2,:)) - &
                 spread(w_lr, 2,n_vars)*(u_lr(:,2,:) - u_lr(:,1,:))
   end subroutine flux_kurganovTadmor_1d
 
+  ! Jannis: Maybe this is not such a great idea, since the overhead of the
+  ! function calls can become significant in this line-by-line algorithm.
+  !
+  ! subroutine flux_generic(nc, n_gc, n_vars, cc_line, flux, flux_dim, &
+  !      to_primitive, to_conservative, &
+  !      max_wavespeed, flux_from_primitives)
+  !   integer, intent(in)     :: nc
+  !   integer, intent(in)     :: n_gc
+  !   integer, intent(in)     :: n_vars
+  !   real(dp), intent(in)    :: cc_line(1-n_gc:nc+n_gc, n_vars)
+  !   real(dp), intent(out)    :: flux(1:nc+1, n_vars)
+  !   integer, intent(in)     :: flux_dim
+  !   procedure(subr_prim_cons) :: to_primitive, to_conservative
+  !   procedure(subr_max_wavespeed) :: max_wavespeed
+  !   procedure(subr_flux_from_prim) :: flux_from_primitives
 
+  !   real(dp) :: prim_vars(1-n_gc:nc+n_gc, n_vars)
+  !   real(dp) :: u_lr(1:nc+1, 2, n_vars)
+  !   real(dp) :: w_lr(1:nc+1)
+  !   real(dp) :: flux_lr(1:nc+1, 2, n_vars)
+  !   integer  :: i, j
+
+  !   if (n_gc /= 2) error stop "n_gc /= 2"
+
+  !   !We need primitives at the ghost cells as they're used for reconstruction
+  !   call to_primitive(nc+2*n_gc, n_vars, cc_line, prim_vars)
+  !   call reconstruct_lr_1d(nc, n_gc, n_vars, prim_vars, u_lr)
+  !   call get_max_wavespeed_lr_1d(nc+1, n_vars, 1, u_lr, w_lr)
+  !   call get_fluxes_lr_1d(nc+1, n_vars, 1, u_lr, flux_lr)
+  !   call to_conservatives(nc+1, n_vars, u_lr, cons_vars)
+  !   call flux_kurganovTadmor_1d(nc+1, n_vars, flux_lr, u_lr, w_lr, flux)
+  !   tree%boxes(id)%fc(:, j, 1, :) = flux
+
+  ! end subroutine flux_generic
 
   !> Compute flux according to Koren limiter
   subroutine flux_koren_3d(cc, v, nc, ngc)
@@ -221,7 +254,7 @@ contains
 
     aa = a * a
     ab = a * b
-    
+
 
     if (ab <= 0) then
        ! a and b have different sign or one of them is zero, so r is either 0,
@@ -238,13 +271,13 @@ contains
        bphi = b
     end if
   end function koren_mlim
-  
+
   elemental function vanLeer_mlim(a, b) result(phi)
     real(dp), intent(in) :: a
     real(dp), intent(in) :: b
     real(dp) :: phi
     phi = (2.0_dp*max(0.0_dp, a*b))/(a + b + epsilon(1.0_dp))
-  
+
   end function vanLeer_mlim
 
 

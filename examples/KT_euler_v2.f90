@@ -182,53 +182,6 @@ program KT_euler
     c(4) = (p/(Y-1.0_dp)) + 0.5_dp*rho*(u**2 + v**2)
 
   end function convert_to_conservatives
-  !======================================================
-!  subroutine updatePrimitives( box )
-!    type(box_t), intent(inout) :: box
-!    real(dp) :: rho, rhou, rhov, E
-!    integer :: nc, IJK
-!    nc = box%n_cell
-!    do KJI_DO(1,nc)
-!      rho = box%cc(IJK, i_rho)
-!      rhou = box%cc(IJK, i_mom(1))
-!      rhov = box%cc(IJK, i_mom(2))
-!      E = box%cc(IJK, i_e)
-!      box%cc(IJK, ip2) = rhou/rho
-!      box%cc(IJK, ip3) = rhov/rho
-!      box%cc(IJK, ip4) = (Y-1.0_dp)*(E - &
-!                                    (rhou**2 + rhov**2)/(2.0_dp*rho))
-!    end do; CLOSE_DO
-
-!    !box%cc(DTIMES(:),ip2) = box%cc(DTIMES(:),ip2)/box%cc(DTIMES(:),i_rho)
-!    !box%cc(DTIMES(:),ip2) = box%cc(DTIMES(:),ip3)/box%cc(DTIMES(:),i_rho)
-!
-!
-!
-!
-!  end subroutine updatePrimitives
-  !======================================================
-!  subroutine updatePrimitives( tree, id )
-!    type(af_t), intent(inout) :: tree
-!    integer, intent(in) :: id
-!    real(dp) :: rho, rhou, rhov, E
-!    integer :: nc, IJK
-!
-!    nc = tree%boxes(id)%n_cell
-!    do KJI_DO(1,nc)
-!      rho = tree%boxes(id)%cc(IJK, i_rho)
-!      rhou = tree%boxes(id)%cc(IJK, i_mom(1))
-!      rhov = tree%boxes(id)%cc(IJK, i_mom(2))
-!      E = tree%boxes(id)%cc(IJK, i_e)
-!      tree%boxes(id)%cc(IJK, ip2) = rhou/rho
-!      tree%boxes(id)%cc(IJK, ip3) = rhov/rho
-!      tree%boxes(id)%cc(IJK, ip4) = (Y-1.0_dp)*(E - &
-!                                    (rhou**2 + rhov**2)/(2.0_dp*rho))
-!    end do; CLOSE_DO
-!
-!
-!
-!  end subroutine updatePrimitives
-  !=====================================================================
 
   subroutine setInitConds( box )
     type(box_t), intent(inout) :: box
@@ -283,172 +236,81 @@ program KT_euler
   subroutine fluxComputation( tree, id )
     use m_af_flux_schemes
     type(af_t), intent(inout) :: tree
-    integer, intent(in) :: id
-    integer :: nc, i, j
-    real(dp) :: dr(NDIM)
-    real(dp), allocatable :: cc(DTIMES(:), :)
-!    real(dp), allocatable :: fc1(DTIMES(:), :), &
-!                             fc2(DTIMES(:), :), &
-!                             fc3(DTIMES(:), :), &
-!                             fc4(DTIMES(:), :)
-    real(dp), allocatable :: locWSp(DTIMES(:), :)
-    real(dp), allocatable :: prim_vars(:,:)
-    real(dp), allocatable :: u_lr(:,:,:), w_lr(:)
-    real(dp), allocatable :: flux_lr(:,:,:), flux(:,:)
-    
+    integer, intent(in)       :: id
+    integer                   :: nc, i, j
+    real(dp), allocatable     :: cc(DTIMES(:), :)
+    real(dp), allocatable     :: prim_vars(:,:), cc_line(:, :)
+    real(dp), allocatable     :: u_lr(:,:,:), w_lr(:)
+    real(dp), allocatable     :: flux_lr(:,:,:), flux(:,:)
+
 
     nc = tree%boxes(id)%n_cell
-    dr = tree%boxes(id)%dr !Not used
     allocate(cc(DTIMES(-1:nc+2), n_vars))
+    allocate(cc_line(-1:nc+2, n_vars))
     allocate(prim_vars(-1:nc+2, n_vars))
     allocate(u_lr(1:nc+1, 2, n_vars))
     allocate(w_lr(1:nc+1))
     allocate(flux_lr(1:nc+1, 2, n_vars))
     allocate(flux(1:nc+1, n_vars))
 
-    allocate(locWSp(DTIMES(1:nc+1), NDIM))
-
     call af_gc2_box(tree, id, [i_rho, i_mom(1), i_mom(2), i_e], cc)
-    !We need primitives at the ghost cells as they're used for reconstruction
-    call to_primitive(nc, n_vars, cc)
 
     ! x-direction
     do j = 1, nc
-       prim_vars = cc(:, j, :)
+       !We need primitives at the ghost cells as they're used for reconstruction
+       cc_line = cc(:, j, :)
+       call to_primitive(nc+2*n_gc, n_vars, cc_line, prim_vars)
        call reconstruct_lr_1d(nc, n_gc, n_vars, prim_vars, u_lr)
        call get_max_wavespeed_lr_1d(nc+1, n_vars, 1, u_lr, w_lr)
        call get_fluxes_lr_1d(nc+1, n_vars, 1, u_lr, flux_lr)
-       call to_conservatives(nc+1, n_vars, u_lr, 1)
+       call to_conservatives(nc+1, n_vars, u_lr)
        call flux_kurganovTadmor_1d(nc+1, n_vars, flux_lr, u_lr, w_lr, flux)
        tree%boxes(id)%fc(:, j, 1, :) = flux
     end do
 
     ! y-direction
     do i = 1, nc
-       prim_vars = cc(i, :, :)
+       cc_line = cc(i, :, :)
+       call to_primitive(nc+2*n_gc, n_vars, cc_line, prim_vars)
        call reconstruct_lr_1d(nc, n_gc, n_vars, prim_vars, u_lr)
        call get_max_wavespeed_lr_1d(nc+1, n_vars, 2, u_lr, w_lr)
        call get_fluxes_lr_1d(nc+1, n_vars, 2, u_lr, flux_lr)
-       call to_conservatives(nc+1, n_vars, u_lr, 2)
+       call to_conservatives(nc+1, n_vars, u_lr)
        call flux_kurganovTadmor_1d(nc+1, n_vars, flux_lr, u_lr, w_lr, flux)
        tree%boxes(id)%fc(i, :, 2, :) = flux
     end do
 
-
-!    tree%boxes(id)%fc(:,:,1,if1) = avgFluxLR(fc1,fc2,fc3,fc4,11, nc) - &
-!                                   0.5_dp*locWSp(DTIMES(:),1)* &
-!                                   (fc1(DTIMES(:), 2) - fc1(DTIMES(:), 1))
-
-!    tree%boxes(id)%fc(:,:,2,if1) = avgFluxTB(fc1,fc2,fc3,fc4,12, nc) - &
-!                                   0.5_dp*locWSp(DTIMES(:),2)* &
-!                                   (fc1(DTIMES(:), 4) - fc1(DTIMES(:), 3))
-
-
-!    tree%boxes(id)%fc(:,:,1,if2) = avgFluxLR(fc1,fc2,fc3,fc4,21, nc) - &
-!                                   0.5_dp*locWSp(DTIMES(:),1)* &
-!                                   (fc2(DTIMES(:), 2) - fc2(DTIMES(:), 1))
-!    tree%boxes(id)%fc(:,:,2,if2) = avgFluxTB(fc1,fc2,fc3,fc4,22, nc) - &
-!                                   0.5_dp*locWSp(DTIMES(:),2)* &
-!                                   (fc2(DTIMES(:), 4) - fc2(DTIMES(:), 3))
-
-
-!    tree%boxes(id)%fc(:,:,1,if3) = avgFluxLR(fc1,fc2,fc3,fc4,31, nc) - &
-!                                   0.5_dp*locWSp(DTIMES(:),1)* &
-!                                   (fc3(DTIMES(:), 2) - fc3(DTIMES(:), 1))
-!    tree%boxes(id)%fc(:,:,2,if3) = avgFluxTB(fc1,fc2,fc3,fc4,32, nc) - &
-!                                   0.5_dp*locWSp(DTIMES(:),2)* &
-!                                   (fc3(DTIMES(:), 4) - fc3(DTIMES(:), 3))
-
-
-!    tree%boxes(id)%fc(:,:,1,if4) = avgFluxLR(fc1,fc2,fc3,fc4,41, nc) - &
-!                                   0.5_dp*locWSp(DTIMES(:),1)* &
-!                                   (fc4(DTIMES(:), 2) - fc4(DTIMES(:), 1))
-
-!    tree%boxes(id)%fc(:,:,2,if4) = avgFluxTB(fc1,fc2,fc3,fc4,42, nc) - &
-!                                   0.5_dp*locWSp(DTIMES(:),2)* &
-!                                   (fc4(DTIMES(:), 4) - fc4(DTIMES(:), 3))
-
-
   end subroutine fluxComputation
-  
-  subroutine to_primitive( nc, n_vars, cc )
-    integer, intent(in) :: nc, n_vars
-    real(dp), intent(inout) :: cc(DTIMES(-1:nc+2), n_vars)
-    cc(DTIMES(:), i_mom(1)) = cc(DTIMES(:), i_mom(1))/cc(DTIMES(:), i_rho)
-    cc(DTIMES(:), i_mom(2)) = cc(DTIMES(:), i_mom(2))/cc(DTIMES(:), i_rho)
-    cc(DTIMES(:), i_e) = (Y-1.0_dp)*( cc(DTIMES(:), i_e) - &
-                       0.5_dp*cc(DTIMES(:), i_rho)*(cc(DTIMES(:), i_mom(1))**2 + & 
-                                                cc(DTIMES(:), i_mom(2))**2)) 
+
+  subroutine to_primitive(n_values, n_vars, cc, prim_vars)
+    integer, intent(in) :: n_values, n_vars
+    real(dp), intent(in) :: cc(n_values, n_vars)
+    real(dp), intent(out) :: prim_vars(n_values, n_vars)
+
+    prim_vars(:, i_rho) = cc(:, i_rho)
+    prim_vars(:, i_mom(1)) = cc(:, i_mom(1))/cc(:, i_rho)
+    prim_vars(:, i_mom(2)) = cc(:, i_mom(2))/cc(:, i_rho)
+    prim_vars(:, i_e) = (Y-1.0_dp) * (cc(:, i_e) - &
+         0.5_dp*prim_vars(:, i_rho)* sum(prim_vars(:, i_mom(:))**2, dim=2))
   end subroutine to_primitive
-  
-  subroutine to_conservatives( nf, n_vars, u_lr, flux_dim)
-    integer, intent(in) :: nf, n_vars, flux_dim
+
+  subroutine to_conservatives(nf, n_vars, u_lr)
+    integer, intent(in)     :: nf, n_vars
     real(dp), intent(inout) :: u_lr(nf, 2, n_vars)
-    u_lr(:,:, i_mom(flux_dim)) = u_lr(:,:,i_rho)*u_lr(:,:, i_mom(flux_dim))
-    u_lr(:,:, i_e) = u_lr(:,:, i_e)/(Y - 1.0_dp)
-    if (flux_dim==1) then
-      u_lr(:,:,i_e) = u_lr(:,:,i_e) + (u_lr(:,:,i_mom(flux_dim))**2 + & 
-                      u_lr(:,:,i_rho)**2*u_lr(:,:,i_mom(2))**2)/ &
-                      (2.0_dp*u_lr(:,:,i_rho))
-    else
-      u_lr(:,:,i_e) = u_lr(:,:,i_e) + (u_lr(:,:,i_mom(flux_dim))**2 + & 
-                      u_lr(:,:,i_rho)**2*u_lr(:,:,i_mom(1))**2)/ &
-                      (2.0_dp*u_lr(:,:,i_rho))
-    endif
-                      
+    real(dp)                :: kin_en(nf, 2)
+    integer                 :: i
+
+    ! Compute 0.5 rho velocity^2
+    kin_en = 0.5_dp * u_lr(:, :, i_rho) * sum(u_lr(:, :, i_mom(:))**2, dim=3)
+
+    ! Compute energy from pressure and kinetic energy
+    u_lr(:,:, i_e) = u_lr(:,:, i_e)/(Y - 1.0_dp) + kin_en
+
+    ! Compute momentum from density and velocity components
+    do i = 1, NDIM
+       u_lr(:,:, i_mom(i)) = u_lr(:,:,i_rho)*u_lr(:,:, i_mom(i))
+    end do
   end subroutine to_conservatives
-  !=====================================================================
-  function avgFluxLR(fc1, fc2, fc3, fc4, eqno, nc) result(avgFlux)
-    integer, intent(in) :: nc
-    real(dp), intent(in), dimension(DTIMES(1:nc+1), 2*NDIM) :: fc1, fc2, fc3, fc4
-    integer, intent(in) :: eqno
-    real(dp) :: avgFlux(DTIMES(1:nc+1))
-
-    avgFlux = 0.5_dp*( eulerFlux(fc1(DTIMES(:),1), fc2(DTIMES(:),1), &
-                                 fc3(DTIMES(:),1), fc4(DTIMES(:),1), eqno) + &
-                       eulerFlux(fc1(DTIMES(:),2), fc2(DTIMES(:),2), &
-                                 fc3(DTIMES(:),2), fc4(DTIMES(:),2), eqno))
-  end function avgFluxLR
-
-  !=====================================================================
-  function avgFluxTB(fc1, fc2, fc3, fc4, eqno, nc) result(avgFlux)
-    integer, intent(in) :: nc
-    real(dp), intent(in), dimension(DTIMES(1:nc+1), 2*NDIM) :: fc1, fc2, fc3, fc4
-    integer, intent(in) :: eqno
-    real(dp) :: avgFlux(DTIMES(1:nc+1))
-
-    avgFlux = 0.5_dp*( eulerFlux(fc1(DTIMES(:),3), fc2(DTIMES(:),3), &
-                                 fc3(DTIMES(:),3), fc4(DTIMES(:),3), eqno) + &
-                       eulerFlux(fc1(DTIMES(:),4), fc2(DTIMES(:),4), &
-                                 fc3(DTIMES(:),4), fc4(DTIMES(:),4), eqno))
-
-  end function avgFluxTB
-  !=====================================================================
-  elemental function eulerFlux(c1, c2, c3, c4, eqno) result(flux)
-    real(dp), intent(in) :: c1, c2, c3, c4
-    integer, intent(in) :: eqno
-    real(dp) :: flux
-
-    select case( eqno )
-      case( 11 )
-        flux = c2
-      case( 12 )
-        flux = c3
-      case( 21 )
-        flux = (c2**2/c1) + (Y-1.0_dp)*(c4 - (c2**2 + c3**2)/(2.0_dp*c1))
-      case( 22 )
-        flux = (c2*c3)/c1
-      case( 31 )
-        flux = (c2*c3)/c1
-      case( 32 )
-        flux = (c3**2/c1) + (Y-1.0_dp)*(c4 - (c2**2 + c3**2)/(2.0_dp*c1))
-      case( 41 )
-        flux = (c2/c1)*(c4 + (Y-1.0_dp)*(c4 - (c2**2 + c3**2)/(2.0_dp*c1)))
-      case( 42 )
-        flux = (c3/c1)*(c4 + (Y-1.0_dp)*(c4 - (c2**2 + c3**2)/(2.0_dp*c1)))
-    end select
-
-  end function eulerFlux
 
   subroutine get_max_wavespeed_lr_1d(nf, n_var, flux_dim, u_lr, w_lr)
     integer, intent(in)   :: nf    !< Number of cell faces
@@ -464,82 +326,37 @@ program KT_euler
   end subroutine get_max_wavespeed_lr_1d
 
   subroutine get_fluxes_lr_1d(nf, n_var, flux_dim, u_lr, flux_lr)
-    integer, intent(in)   :: nf    !< Number of cell faces
-    integer, intent(in)   :: n_var !< Number of variables
+    integer, intent(in)   :: nf       !< Number of cell faces
+    integer, intent(in)   :: n_var    !< Number of variables
     integer, intent(in)   :: flux_dim !< In which dimension fluxes are computed
     real(dp), intent(in)  :: u_lr(nf, 2, n_var)
     real(dp), intent(out) :: flux_lr(nf, 2, n_var)
-    real(dp) :: E(nf, 2)
+    real(dp)              :: E(nf, 2)
+    integer               :: i
 
     ! Compute left and right flux for conservative variables from the primitive
     ! reconstructed values.
+
+    ! Density flux
     flux_lr(:,:,i_rho) = u_lr(:,:,i_rho)*u_lr(:,:,i_mom(flux_dim))
-    if (flux_dim == 1) then
-      flux_lr(:,:, i_mom(1)) = u_lr(:,:,i_e) + &
-                               u_lr(:,:,i_rho)*u_lr(:,:,i_mom(flux_dim))**2      
-    else
-      flux_lr(:,:, i_mom(1)) = u_lr(:,:,i_rho)* & 
-                               u_lr(:,:,i_mom(1))*u_lr(:,:,i_mom(flux_dim))
-    endif
-    
-    if (flux_dim == 2) then
-      flux_lr(:,:, i_mom(2)) = u_lr(:,:,i_e) + &
-                               u_lr(:,:,i_rho)*u_lr(:,:,i_mom(flux_dim))**2      
-    else
-      flux_lr(:,:, i_mom(2)) = u_lr(:,:,i_rho)* & 
-                               u_lr(:,:,i_mom(1))*u_lr(:,:,i_mom(flux_dim))
-    endif
-    E = u_lr(:,:,i_e)/(Y-1.0_dp) + 0.5_dp*u_lr(:,:,i_rho)*(& 
-        u_lr(:,:,i_mom(1))**2 + u_lr(:,:,i_mom(2))**2)
-    flux_lr(:,:, i_e) = u_lr(:,:,i_mom(flux_dim))*(E + u_lr(:,:,i_e))    
-    
-  end subroutine get_fluxes_lr_1d
 
-  subroutine waveSpeed_2d( fc1, fc2, fc3, fc4, a, nc )
-    integer, intent(in) :: nc
-    real(dp), intent(in) :: fc1(DTIMES(1:nc+1), 4), &
-                            fc2(DTIMES(1:nc+1), 4), &
-                            fc3(DTIMES(1:nc+1), 4), &
-                            fc4(DTIMES(1:nc+1), 4)
-    real(dp), intent(inout) :: a(DTIMES(1:nc+1), 2)
-    real(dp) :: u_int(1:nc+1), u_out(1:nc+1), v_int(1:nc+1), v_out(nc+1)
-    real(dp) :: p_int(1:nc+1), p_out(1:nc+1), c_int(1:nc+1), c_out(1:nc+1)
-    integer :: n
-
-    do n=1,nc+1
-      !x-dir
-      !print *, product(fc1(:,n,1))
-      u_int(:) = fc2(:,n,1)/fc1(:,n,1)
-      u_out(:) = fc2(:,n,2)/fc1(:,n,2)
-      p_int(:) = (Y-1.0_dp)*(fc4(:,n,1) - (fc2(:,n,1)**2 + fc3(:,n,1)**2)/ &
-                                          (2.0_dp*fc1(:,n,1)))
-      p_out(:) = (Y-1.0_dp)*(fc4(:,n,2) - (fc2(:,n,2)**2 + fc3(:,n,2)**2)/ &
-                                          (2.0_dp*fc1(:,n,2)))
-      c_int(:) = sqrt((Y * p_int)/fc1(:,n,1))
-      c_out(:) = sqrt((Y * p_out)/fc1(:,n,2))
-      a(:,n, 1) = max( &
-                  max(abs(u_int(:) + c_int(:)), abs(u_int(:) - c_int(:)), abs(c_int(:))), &
-                  max(abs(u_out(:) + c_out(:)), abs(u_out(:) - c_out(:)), abs(c_out(:))))
-
-
-      v_int(:) = fc2(n,:,1)/fc1(n,:,1)
-      v_out(:) = fc2(n,:,2)/fc1(n,:,2)
-      p_int(:) = (Y-1.0_dp)*(fc4(n,:,1) - (fc2(n,:,1)**2 + fc3(n,:,1)**2)/ &
-                                          (2.0_dp*fc1(:,n,1)))
-      p_out(:) = (Y-1.0_dp)*(fc4(n,:,2) - (fc2(n,:,2)**2 + fc3(n,:,2)**2)/ &
-                                          (2.0_dp*fc1(n,:,2)))
-      c_int(:) = sqrt((Y - p_int)/fc1(n,:,1))
-      c_out(:) = sqrt((Y - p_out)/fc1(n,:,2))
-      a(:,n, 2) = max( &
-                  max(abs(v_int(:) + c_int(:)), abs(v_int(:) - c_int(:)), abs(c_int(:))), &
-                  max(abs(v_out(:) + c_out(:)), abs(v_out(:) - c_out(:)), abs(c_out(:))))
-
+    ! Momentum flux
+    do i = 1, NDIM
+       flux_lr(:,:, i_mom(i)) = u_lr(:,:,i_rho) * &
+            u_lr(:,:,i_mom(i)) * u_lr(:,:,i_mom(flux_dim))
     end do
 
+    ! Add pressure term
+    flux_lr(:,:, i_mom(flux_dim)) = flux_lr(:,:, i_mom(flux_dim)) + u_lr(:,:,i_e)
 
-  end subroutine waveSpeed_2d
+    ! Compute energy
+    E = u_lr(:,:,i_e)/(Y-1.0_dp) + 0.5_dp*u_lr(:,:,i_rho)*(&
+         u_lr(:,:,i_mom(1))**2 + u_lr(:,:,i_mom(2))**2)
 
-  !=====================================================================
+    ! Energy flux
+    flux_lr(:,:, i_e) = u_lr(:,:,i_mom(flux_dim))*(E + u_lr(:,:,i_e))
+
+  end subroutine get_fluxes_lr_1d
 
   subroutine updateSoln( box, dt )
     type(box_t), intent(inout) :: box
@@ -594,6 +411,7 @@ program KT_euler
       end do
     end do
   end subroutine updateSoln
+
   !======================================================
   subroutine ref_rout( box, cell_flags )
     type(box_t), intent(in) :: box
