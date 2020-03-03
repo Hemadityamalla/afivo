@@ -58,7 +58,7 @@ program KT_euler
 
 
 
-  grid(:) = 25*ncells
+  grid(:) = 50*ncells
   l_max(:) = 1.0_dp
   l_min(:) = 0.0_dp
   periodicBC(:) = .false.
@@ -110,14 +110,16 @@ program KT_euler
   time = 0.0_dp
   end_time = 0.2_dp
   t_iter = 0
+  dt = 2.0e-04_dp
   do
    !Updating the primitive vars
    !call af_tree_copy_cc(tree, i_mom(1), ip2)
    !call af_tree_copy_cc(tree, i_mom(2), ip3)
    !call af_tree_copy_cc(tree, i_e, ip4)
    !call af_loop_box(tree, updatePrimitives)
-   dr_min = af_min_dr(tree)
-   dt = end_time/(sum(wSp/dr_min) + epsilon(1.0_dp))
+   !dr_min = af_min_dr(tree)
+   !dt = end_time/(sum(wSp/dr_min) + epsilon(1.0_dp))
+   !print *, dt
     if (mod(t_iter, 10) == 0) then
       write(fname, "(A,I0)") "KT_euler_" // DIMNAME // "_", t_iter
       call af_write_silo(tree, trim(fname), t_iter, time, dir="output", &
