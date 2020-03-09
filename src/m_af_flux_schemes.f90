@@ -151,12 +151,12 @@ contains
       grad1 = cc(n-1, :) - cc(n-2, :)
       grad2 = cc(n, :) - cc(n-1, :)
       grad3 = cc(n+1, :) - cc(n, :)
-      !vint(n) = vint(n)*(cc(n-1) + 0.5_dp*koren_mlim(grad1, grad2)) !left
-      !vout(n) = vout(n)*(cc(n) - 0.5_dp*koren_mlim(grad2, grad3)) !right
+      u_lr(n,1,:) = cc(n-1,:) + 0.5_dp*koren_mlim(grad1, grad2) !left
+      u_lr(n,2,:) = cc(n,:) - 0.5_dp*koren_mlim(grad2, grad3) !right
       !vint(n) = vint(n)*(cc(n-1) + 0.5_dp*vanLeer_mlim(grad1, grad2)) !left
       !vout(n) = vout(n)*(cc(n) - 0.5_dp*vanLeer_mlim(grad2, grad3)) !right
-      u_lr(n, 1, :) = cc(n-1, :) + 0.5_dp*minmod_mlim(grad1, grad2) !left
-      u_lr(n, 2, :) = cc(n, :) - 0.5_dp*minmod_mlim(grad2, grad3) !right
+      !u_lr(n, 1, :) = cc(n-1, :) + 0.5_dp*minmod_mlim(grad1, grad2) !left
+      !u_lr(n, 2, :) = cc(n, :) - 0.5_dp*minmod_mlim(grad2, grad3) !right
     end do
   end subroutine reconstruct_lr_1d
 
