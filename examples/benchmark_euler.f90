@@ -32,8 +32,8 @@ program KT_euler
   integer :: refine_steps
   real(dp) :: dr_min(NDIM)
 
-  print *, "Running Euler 2D with KT scheme"
-  print *, "Number of threads", af_get_max_threads()
+  !print *, "Running Euler 2D with KT scheme"
+  !print *, "Number of threads", af_get_max_threads()
 
   !Config 1
 !  p = (/1.0_dp, 0.4_dp, 0.0439_dp, 0.15_dp/)
@@ -120,12 +120,14 @@ program KT_euler
    !dr_min = af_min_dr(tree)
    !dt = end_time/(sum(wSp/dr_min) + epsilon(1.0_dp))
    !print *, dt
-    if (mod(t_iter, 10) == 0) then
-      write(fname, "(A,I0)") "KT_euler_" // DIMNAME // "_", t_iter
-      call af_write_silo(tree, trim(fname), t_iter, time, dir="output", &
-           add_vars = writePrimitives, add_names=["xVel","yVel","pres"])
-    end if
+!    if (mod(t_iter, 10) == 0) then
+!      write(fname, "(A,I0)") "KT_euler_" // DIMNAME // "_", t_iter
+!      call af_write_silo(tree, trim(fname), t_iter, time, dir="output", &
+!           add_vars = writePrimitives, add_names=["xVel","yVel","pres"])
+!    end if
 
+!Added two flux computations for benchmarking
+   call af_loop_tree(tree, fluxComputation)
    call af_loop_tree(tree, fluxComputation)
    call af_consistent_fluxes(tree, [i_rho,i_mom(1), i_mom(2), i_e])
    call af_loop_box_arg(tree, updateSoln, [dt])
