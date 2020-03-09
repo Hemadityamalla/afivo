@@ -79,8 +79,5 @@ documentation/html/*
 /examples/dielectric_surface_2d
 /examples/dielectric_surface_3d
 /documentation/auto/
-<<<<<<< HEAD
 ./examples/blah/*.curve
-./examples/vgcore*
-=======
->>>>>>> a1c80800d4325908179a9e59fcfccdaa36210d61
+./example/*.py
