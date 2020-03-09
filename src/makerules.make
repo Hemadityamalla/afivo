@@ -22,6 +22,12 @@ else ifeq ($(COMPILER), ifort)
 	endif
 endif
 
+ifeq ($(PROF), gprof)
+  FFLAGS += -pg
+else ifeq ($(PROF), gperftools)
+  LIBS += profiler
+endif
+
 # How to get .o object files from .f90 source files
 %.o: %.f90
 	$(FC) -c -o $@ $< $(FFLAGS) $(addprefix -I,$(INCDIRS))
